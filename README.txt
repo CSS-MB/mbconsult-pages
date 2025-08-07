@@ -1,7 +1,4 @@
-Hyperspace by HTML5 UP
-html5up.net |
-Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
-
+Free for personal and commercial use under the CCA 3.0 license.
 
 So I've had the wireframe for this particular design kicking around for some time, but with all
 the other interesting (and in some cases, semi-secret) projects I've been working on it took me
@@ -26,4 +23,5 @@ Credits:
 	Other:
 		jQuery (jquery.com)
 		Scrollex (github.com/ajlkn/jquery.scrollex)
+
 		Responsive Tools (github.com/ajlkn/responsive-tools)
