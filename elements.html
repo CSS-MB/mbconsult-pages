@@ -1,144 +1,227 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <!--
     MB CONSULT Site
     Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
 -->
 <html lang="en">
-
-<head>
+  <head>
     <title>MB CONSULT | Services & Features</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="assets/css/main.css" />
     <noscript>
-        <link rel="stylesheet" href="assets/css/noscript.css" />
+      <link rel="stylesheet" href="assets/css/noscript.css" />
     </noscript>
-</head>
+  </head>
 
-<body class="is-preload">
-
+  <body class="is-preload">
     <!-- Header -->
     <header id="header">
-        <a href="index.html" class="title">MB CONSULT</a>
-        <nav>
-            <ul>
-                <li><a href="index.html">Home</a></li>
-                <li><a href="generic.html">About</a></li>
-                <li><a href="elements.html" class="active">Services &amp; Features</a></li>
-            </ul>
-        </nav>
+      <a href="index.html" class="title">MB CONSULT</a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="generic.html">About</a></li>
+          <li>
+            <a href="elements.html" class="active">Services &amp; Features</a>
+          </li>
+        </ul>
+      </nav>
     </header>
 
     <!-- Wrapper -->
     <div id="wrapper">
+      <!-- Main -->
+      <section id="main" class="wrapper">
+        <div class="inner">
+          <h1 class="major">Services &amp; Features</h1>
 
-        <!-- Main -->
-        <section id="main" class="wrapper">
-            <div class="inner">
-                <h1 class="major">Services &amp; Features</h1>
+          <section>
+            <h2>Consulting Services Overview</h2>
+            <p>
+              MB CONSULT offers a comprehensive suite of business consulting
+              services designed to help organizations thrive. Our expertise
+              spans process optimization, technology integration, strategic
+              planning, and operational improvement. Every solution is tailored
+              to your unique needs, ensuring measurable results and sustainable
+              growth.
+            </p>
+            <hr />
 
-                <section>
-                    <h2>Consulting Services Overview</h2>
-                    <p>
-                        MB CONSULT offers a comprehensive suite of business consulting services designed to help
-                        organizations thrive. Our expertise spans process optimization, technology integration, strategic
-                        planning, and operational improvement. Every solution is tailored to your unique needs, ensuring
-                        measurable results and sustainable growth.
-                    </p>
-                    <hr />
+            <h2>What We Provide</h2>
+            <ul>
+              <li>
+                <strong>Business Analysis:</strong> In-depth review of your
+                operations to identify opportunities and challenges.
+              </li>
+              <li>
+                <strong>Process Optimization:</strong> Streamlining workflows
+                for greater efficiency and cost savings.
+              </li>
+              <li>
+                <strong>Technology Solutions:</strong> Guidance on selecting and
+                implementing the right tools for your business.
+              </li>
+              <li>
+                <strong>Strategic Planning:</strong> Actionable plans to help
+                you achieve short- and long-term goals.
+              </li>
+              <li>
+                <strong>Change Management:</strong> Support for smooth
+                transitions and team adoption of new practices.
+              </li>
+            </ul>
+            <hr />
 
-                    <h2>What We Provide</h2>
-                    <ul>
-                        <li><strong>Business Analysis:</strong> In-depth review of your operations to identify opportunities
-                            and challenges.</li>
-                        <li><strong>Process Optimization:</strong> Streamlining workflows for greater efficiency and cost
-                            savings.</li>
-                        <li><strong>Technology Solutions:</strong> Guidance on selecting and implementing the right tools
-                            for your business.</li>
-                        <li><strong>Strategic Planning:</strong> Actionable plans to help you achieve short- and long-term
-                            goals.</li>
-                        <li><strong>Change Management:</strong> Support for smooth transitions and team adoption of new
-                            practices.</li>
-                    </ul>
-                    <hr />
+            <h2>Client Success</h2>
+            <blockquote>
+              "MB CONSULT helped us streamline our operations and achieve new
+              levels of success. Their expertise and collaborative approach made
+              a real difference for our business."
+            </blockquote>
+            <hr />
 
-                    <h2>Client Success</h2>
-                    <blockquote>
-                        "MB CONSULT helped us streamline our operations and achieve new levels of success. Their
-                        expertise and collaborative approach made a real difference for our business."
-                    </blockquote>
-                    <hr />
+            <h2>Feature Highlights</h2>
+            <ul>
+              <li>Clear, actionable advice tailored to your organization</li>
+              <li>
+                Collaborative problem-solving and transparent communication
+              </li>
+              <li>
+                Industry experience across manufacturing, shipping,
+                administration, and HR
+              </li>
+              <li>Practical solutions that drive growth and efficiency</li>
+            </ul>
+            <hr />
 
-                    <h2>Feature Highlights</h2>
-                    <ul>
-                        <li>Clear, actionable advice tailored to your organization</li>
-                        <li>Collaborative problem-solving and transparent communication</li>
-                        <li>Industry experience across manufacturing, shipping, administration, and HR</li>
-                        <li>Practical solutions that drive growth and efficiency</li>
-                    </ul>
-                    <hr />
+            <h2>Contact Us</h2>
+            <form method="post" action="#">
+              <div class="row gtr-uniform">
+                <div class="col-6 col-12-xsmall">
+                  <input
+                    type="text"
+                    name="name"
+                    id="name"
+                    placeholder="Your Name"
+                  />
+                </div>
+                <div class="col-6 col-12-xsmall">
+                  <input
+                    type="email"
+                    name="email"
+                    id="email"
+                    placeholder="Your Email"
+                  />
+                </div>
+                <div class="col-12">
+                  <textarea
+                    name="message"
+                    id="message"
+                    placeholder="How can we help you?"
+                    rows="6"
+                  ></textarea>
+                </div>
+                <div class="col-12">
+                  <ul class="actions">
+                    <li>
+                      <input
+                        type="submit"
+                        value="Send Message"
+                        class="primary"
+                      />
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </form>
+            <!-- …inside your <body>, after the existing form… -->
+            <script>
+              document
+                .querySelector("form")
+                .addEventListener("submit", async function (e) {
+                  e.preventDefault();
+                  const data = {
+                    name: document.getElementById("name").value,
+                    email: document.getElementById("email").value,
+                    message: document.getElementById("message").value,
+                  };
+                  // ← REPLACE this string with your Power Automate POST URL:
+                  const endpoint =
+                    "https://prod-XX.westus.logic.azure.com/...&sig=YOUR_SIG";
+                  const response = await fetch(endpoint, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data),
+                  });
+                  if (response.ok) {
+                    alert("Message sent! Thank you.");
+                  } else {
+                    alert("Oops, something went wrong. Please try again.");
+                  }
+                });
+            </script>
+          </section>
 
-                    <h2>Contact Us</h2>
-                    <form method="post" action="#">
-                        <div class="row gtr-uniform">
-                            <div class="col-6 col-12-xsmall">
-                                <input type="text" name="name" id="name" placeholder="Your Name" />
-                            </div>
-                            <div class="col-6 col-12-xsmall">
-                                <input type="email" name="email" id="email" placeholder="Your Email" />
-                            </div>
-                            <div class="col-12">
-                                <textarea name="message" id="message" placeholder="How can we help you?" rows="6"></textarea>
-                            </div>
-                            <div class="col-12">
-                                <ul class="actions">
-                                    <li><input type="submit" value="Send Message" class="primary" /></li>
-                                </ul>
-                            </div>
-                        </div>
-                    </form>
-                </section>
-
-                <section>
-                    <h2>Our Approach</h2>
-                    <p><span class="image left"><img src="images/pic05.jpg" alt="Team collaboration" /></span>
-                        MB CONSULT delivers practical solutions to help your business thrive. Our team works side-by-side
-                        with you to identify challenges, streamline processes, and implement strategies that make a real
-                        impact. We focus on understanding your unique needs and providing guidance that leads to
-                        measurable improvements.
-                    </p>
-                    <p><span class="image right"><img src="images/pic06.jpg" alt="Consultant working with client" /></span>
-                        At MB CONSULT, we help organizations unlock their full potential through expert guidance and
-                        practical solutions. Our consultants work closely with you to identify opportunities for growth,
-                        streamline operations, and implement strategies that deliver measurable results. Whether you’re
-                        looking to improve efficiency, adopt new technologies, or strengthen your team, we’re here to
-                        support your success.
-                    </p>
-                    <p>
-                        We value collaboration and transparency in every project. By listening to your needs and
-                        understanding your goals, we create customized plans that fit your business. Our experience
-                        spans multiple industries, allowing us to offer insights and recommendations that drive real
-                        change. Partner with MB CONSULT to move your organization forward with confidence.
-                    </p>
-                    <p><span class="image right"><img src="images/pic06.jpg" alt="Consultant working with client" /></span>
-                        Our approach combines proven methodologies with innovative thinking. We believe that every
-                        challenge is an opportunity to learn and grow. From initial assessment to final implementation,
-                        we keep you informed and involved, ensuring that solutions are sustainable and aligned with
-                        your vision. Let us help you navigate complex business environments and achieve lasting results.
-                    </p>
-                </section>
-            </div>
-        </section>
-
+          <section>
+            <h2>Our Approach</h2>
+            <p>
+              <span class="image left"
+                ><img src="images/pic05.jpg" alt="Team collaboration"
+              /></span>
+              MB CONSULT delivers practical solutions to help your business
+              thrive. Our team works side-by-side with you to identify
+              challenges, streamline processes, and implement strategies that
+              make a real impact. We focus on understanding your unique needs
+              and providing guidance that leads to measurable improvements.
+            </p>
+            <p>
+              <span class="image right"
+                ><img
+                  src="images/pic06.jpg"
+                  alt="Consultant working with client"
+              /></span>
+              At MB CONSULT, we help organizations unlock their full potential
+              through expert guidance and practical solutions. Our consultants
+              work closely with you to identify opportunities for growth,
+              streamline operations, and implement strategies that deliver
+              measurable results. Whether you’re looking to improve efficiency,
+              adopt new technologies, or strengthen your team, we’re here to
+              support your success.
+            </p>
+            <p>
+              We value collaboration and transparency in every project. By
+              listening to your needs and understanding your goals, we create
+              customized plans that fit your business. Our experience spans
+              multiple industries, allowing us to offer insights and
+              recommendations that drive real change. Partner with MB CONSULT to
+              move your organization forward with confidence.
+            </p>
+            <p>
+              <span class="image right"
+                ><img
+                  src="images/pic06.jpg"
+                  alt="Consultant working with client"
+              /></span>
+              Our approach combines proven methodologies with innovative
+              thinking. We believe that every challenge is an opportunity to
+              learn and grow. From initial assessment to final implementation,
+              we keep you informed and involved, ensuring that solutions are
+              sustainable and aligned with your vision. Let us help you navigate
+              complex business environments and achieve lasting results.
+            </p>
+          </section>
+        </div>
+      </section>
     </div>
 
     <!-- Footer -->
     <footer id="footer" class="wrapper alt">
-        <div class="inner">
-            <ul class="menu">
-                <li>&copy; MB CONSULT. All rights reserved.</li>
-            </ul>
-        </div>
+      <div class="inner">
+        <ul class="menu">
+          <li>&copy; MB CONSULT. All rights reserved.</li>
+        </ul>
+      </div>
     </footer>
 
     <!-- Scripts -->
@@ -149,9 +232,9 @@
     <script src="assets/js/breakpoints.min.js"></script>
     <script src="assets/js/util.js"></script>
     <script src="assets/js/main.js"></script>
-    <script type="text/javascript" src="https://mbconsultllc.atlassian.net/s/d41d8cd98f00b204e9800998ecf8427e-T/vf1kch/b/0/c95134bc67d3a521bb3f4331beb9b804/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=bb2d3f81"></script>
-</body>
-
-
+    <script
+      type="text/javascript"
+      src="https://mbconsultllc.atlassian.net/s/d41d8cd98f00b204e9800998ecf8427e-T/vf1kch/b/0/c95134bc67d3a521bb3f4331beb9b804/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=bb2d3f81"
+    ></script>
+  </body>
 </html>
-
