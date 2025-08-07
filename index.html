@@ -227,6 +227,7 @@
                   </li>
                 </ul>
               </form>
+              <!-- …inside your <body>, after the existing form… -->
               <script>
                 document
                   .querySelector("form")
@@ -237,18 +238,18 @@
                       email: document.getElementById("email").value,
                       message: document.getElementById("message").value,
                     };
-                    const response = await fetch(
-                      "https://mbconsult-contact-form.azurewebsites.net/api/SendContactEmail",
-                      {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(data),
-                      }
-                    );
+                    // ← REPLACE this string with your Power Automate POST URL:
+                    const endpoint =
+                      "https://prod-XX.westus.logic.azure.com/...&sig=YOUR_SIG";
+                    const response = await fetch(endpoint, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(data),
+                    });
                     if (response.ok) {
-                      alert("Message sent!");
+                      alert("Message sent! Thank you.");
                     } else {
-                      alert("Error sending message.");
+                      alert("Oops, something went wrong. Please try again.");
                     }
                   });
               </script>
@@ -295,6 +296,9 @@
     <script src="assets/js/breakpoints.min.js"></script>
     <script src="assets/js/util.js"></script>
     <script src="assets/js/main.js"></script>
-    <script type="text/javascript" src="https://mbconsultllc.atlassian.net/s/d41d8cd98f00b204e9800998ecf8427e-T/vf1kch/b/0/c95134bc67d3a521bb3f4331beb9b804/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=bb2d3f81"></script>  
+    <script
+      type="text/javascript"
+      src="https://mbconsultllc.atlassian.net/s/d41d8cd98f00b204e9800998ecf8427e-T/vf1kch/b/0/c95134bc67d3a521bb3f4331beb9b804/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=bb2d3f81"
+    ></script>
   </body>
 </html>
