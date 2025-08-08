@@ -173,7 +173,11 @@
    * Show generic error message
    */
   function showErrorMessage(message) {
-    alert('Error: ' + message);
+  function showErrorMessage(message, form) {
+    // Find or create an error message container in the form
+    const errorContainer = getOrCreateErrorContainer(form);
+    errorContainer.textContent = message;
+    errorContainer.style.display = 'block';
   }
 
   /**
