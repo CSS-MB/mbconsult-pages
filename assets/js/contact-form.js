@@ -38,7 +38,7 @@
       const nameField = form.querySelector('input[name="name"]');
       const emailField = form.querySelector('input[name="email"]');
       const messageField = form.querySelector('textarea[name="message"]');
-      const honeypotField = form.querySelector('input[name="company"]');
+      const honeypotField = form.querySelector('#company');
       
       if (!nameField || !emailField || !messageField) {
         console.error('Contact form missing required fields');
