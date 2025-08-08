@@ -211,7 +211,7 @@ async function handleFormSubmission(form, nameField, emailField, messageField, s
  * Show success message to user
  */
 function showSuccessMessage() {
-    alert('Message sent! Thank you for contacting MB CONSULT. We will get back to you soon.');
+    showNotification('Message sent! Thank you for contacting MB CONSULT. We will get back to you soon.', 'success');
 }
 
 /**
