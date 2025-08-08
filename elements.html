@@ -104,6 +104,7 @@
                     name="name"
                     id="name"
                     placeholder="Your Name"
+                    required
                   />
                 </div>
                 <div class="col-6 col-12-xsmall">
@@ -112,6 +113,7 @@
                     name="email"
                     id="email"
                     placeholder="Your Email"
+                    required
                   />
                 </div>
                 <div class="col-12">
@@ -120,8 +122,11 @@
                     id="message"
                     placeholder="How can we help you?"
                     rows="6"
+                    required
                   ></textarea>
                 </div>
+                <!-- Honeypot field for anti-spam (hidden) -->
+                <input type="text" name="company" id="company" style="display: none;" tabindex="-1" autocomplete="off" />
                 <div class="col-12">
                   <ul class="actions">
                     <li>
@@ -135,30 +140,6 @@
                 </div>
               </div>
             </form>
-            <!-- …inside your <body>, after the existing form… -->
-            <script>
-              document
-                .querySelector("form")
-                .addEventListener("submit", async function (e) {
-                  e.preventDefault();
-                  const data = {
-                    name: document.getElementById("name").value,
-                    email: document.getElementById("email").value,
-                    message: document.getElementById("message").value,
-                  };
-                  const endpoint = "/api/ContactFormHandler";
-                  const response = await fetch(endpoint, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data),
-                  });
-                  if (response.ok) {
-                    alert("Message sent! Thank you.");
-                  } else {
-                    alert("Oops, something went wrong. Please try again.");
-                  }
-                });
-            </script>
           </section>
 
           <section>
@@ -230,6 +211,86 @@
     <script src="assets/js/breakpoints.min.js"></script>
     <script src="assets/js/util.js"></script>
     <script src="assets/js/main.js"></script>
+    
+    <!-- Contact form script -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+        const form = document.querySelector("section form");
+        if (form) {
+          form.addEventListener("submit", async function (e) {
+            e.preventDefault();
+            
+            // Get form data
+            const name = document.getElementById("name").value.trim();
+            const email = document.getElementById("email").value.trim();
+            const message = document.getElementById("message").value.trim();
+            const honeypot = document.getElementById("company").value;
+            
+            // Client-side validation
+            if (!name || !email || !message) {
+              alert("Please fill in all required fields.");
+              return;
+            }
+            
+            // Email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+              alert("Please enter a valid email address.");
+              return;
+            }
+            
+            // Honeypot check (anti-spam)
+            if (honeypot !== "") {
+              // Silently reject spam
+              alert("Message sent! Thank you.");
+              this.reset();
+              return;
+            }
+            
+            // Prepare data for Power Automate
+            const data = {
+              name: name,
+              email: email,
+              message: message
+            };
+            
+            // Show loading state
+            const submitButton = this.querySelector('input[type="submit"]');
+            const originalValue = submitButton.value;
+            submitButton.value = "Sending...";
+            submitButton.disabled = true;
+            
+            try {
+              const endpoint = "https://defaultb72c4bc8430f4822b477a1ae1f3c52.8e.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/126065c601a24faaa4d2fe201b152980/triggers/manual/paths/invoke/?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-jezMV5QDTQ5AnlEY-17zMGXzR00wGyEBpbizVj5gXw";
+              
+              const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { 
+                  "Content-Type": "application/json",
+                  "Accept": "application/json"
+                },
+                body: JSON.stringify(data),
+              });
+              
+              if (response.ok || response.status === 202) {
+                alert("Message sent! Thank you for contacting MB CONSULT.");
+                this.reset();
+              } else {
+                throw new Error(`Server responded with status: ${response.status}`);
+              }
+            } catch (error) {
+              console.error("Form submission error:", error);
+              alert("Sorry, there was an error sending your message. Please try again later or contact us directly at support@mbconsult.io");
+            } finally {
+              // Restore button state
+              submitButton.value = originalValue;
+              submitButton.disabled = false;
+            }
+          });
+        }
+      });
+    </script>
+    
     <script
       type="text/javascript"
       src="https://mbconsultllc.atlassian.net/s/d41d8cd98f00b204e9800998ecf8427e-T/vf1kch/b/0/c95134bc67d3a521bb3f4331beb9b804/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=bb2d3f81"
