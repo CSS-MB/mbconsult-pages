@@ -96,7 +96,7 @@
             <hr />
 
             <h2>Contact Us</h2>
-            <form method="post" action="#">
+            <form method="post" action="#" class="contact-form">
               <div class="row gtr-uniform">
                 <div class="col-6 col-12-xsmall">
                   <input
@@ -212,100 +212,8 @@
     <script src="assets/js/util.js"></script>
     <script src="assets/js/main.js"></script>
     
-    <!-- Contact form script -->
-    <script>
-      (function() {
-        'use strict';
-        
-        function setupFormHandler() {
-          const form = document.querySelector("section form");
-          if (!form) {
-            console.log("Form not found");
-            return;
-          }
-          
-          console.log("Setting up form handler");
-          
-          form.addEventListener("submit", function(e) {
-            e.preventDefault();
-            
-            // Get form data
-            const name = document.getElementById("name").value.trim();
-            const email = document.getElementById("email").value.trim();
-            const message = document.getElementById("message").value.trim();
-            const honeypot = document.getElementById("company").value;
-            
-            console.log("Form submitted with data:", { name, email, message, honeypot });
-            
-            // Client-side validation
-            if (!name || !email || !message) {
-              alert("Please fill in all required fields.");
-              return;
-            }
-            
-            // Email validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-              alert("Please enter a valid email address.");
-              return;
-            }
-            
-            // Honeypot check (anti-spam)
-            if (honeypot !== "") {
-              // Silently reject spam but appear successful
-              alert("Message sent! Thank you.");
-              form.reset();
-              return;
-            }
-            
-            // Prepare data payload
-            const data = { name: name, email: email, message: message };
-            
-            // Show loading state
-            const submitButton = form.querySelector('input[type="submit"]');
-            const originalValue = submitButton.value;
-            submitButton.value = "Sending...";
-            submitButton.disabled = true;
-            
-            // Azure Function endpoint (replaces former Power Automate URL)
-            const endpoint = "https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler";
-            
-            fetch(endpoint, {
-              method: "POST",
-              headers: { 
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-              },
-              body: JSON.stringify(data),
-            })
-            .then(function(response) {
-              if (response.ok || response.status === 202) {
-                alert("Message sent! Thank you for contacting MB CONSULT.");
-                form.reset();
-              } else {
-                throw new Error("Server responded with status: " + response.status);
-              }
-            })
-            .catch(function(error) {
-              console.error("Form submission error:", error);
-              alert("Sorry, there was an error sending your message. Please try again later or contact us directly at support@mbconsult.io");
-            })
-            .finally(function() {
-              // Restore button state
-              submitButton.value = originalValue;
-              submitButton.disabled = false;
-            });
-          });
-        }
-        
-        // Setup form handler when DOM is ready
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', setupFormHandler);
-        } else {
-          setupFormHandler();
-        }
-      })();
-    </script>
+    <!-- Contact form handler -->
+    <script src="assets/js/contact-form.js"></script>
     
     <script
       type="text/javascript"
