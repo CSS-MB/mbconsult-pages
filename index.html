@@ -132,11 +132,11 @@
       <section id="two" class="wrapper style3 fade-up">
         <div class="inner">
           <h2>What we do</h2>
-          <p>
-            MB CONSULT offers a range of services including business analysis,
-            process optimization, and technology consulting. We tailor our
-            approach to meet your specific needs and deliver lasting results.
-          </p>
+            <p>
+              MB CONSULT offers a range of services including business analysis,
+              process optimization, and technology consulting. We tailor our
+              approach to meet your specific needs and deliver lasting results.
+            </p>
           <div class="features">
             <section>
               <span class="icon solid major fa-code"></span>
@@ -219,14 +219,7 @@
                     <textarea name="message" id="message" rows="5" required></textarea>
                   </div>
                   <!-- Honeypot field for anti-spam (hidden) -->
-                  <input
-                    type="text"
-                    name="company"
-                    id="company"
-                    style="display: none;"
-                    tabindex="-1"
-                    autocomplete="off"
-                  />
+                  <input type="text" name="company" id="company" style="display: none;" tabindex="-1" autocomplete="off" />
                 </div>
                 <ul class="actions">
                   <li>
@@ -279,68 +272,68 @@
     <script src="assets/js/breakpoints.min.js"></script>
     <script src="assets/js/util.js"></script>
     <script src="assets/js/main.js"></script>
-
+    
     <!-- Contact form script -->
     <script>
       (function() {
         'use strict';
-
+        
         function setupFormHandler() {
           const form = document.querySelector("#three form");
           if (!form) {
             console.log("Form not found");
             return;
           }
-
-            console.log("Setting up form handler");
-
+          
+          console.log("Setting up form handler");
+          
           form.addEventListener("submit", function(e) {
             e.preventDefault();
-
+            
             // Get form data
             const name = document.getElementById("name").value.trim();
             const email = document.getElementById("email").value.trim();
             const message = document.getElementById("message").value.trim();
             const honeypot = document.getElementById("company").value;
-
+            
             console.log("Form submitted with data:", { name, email, message, honeypot });
-
+            
             // Client-side validation
             if (!name || !email || !message) {
               alert("Please fill in all required fields.");
               return;
             }
-
+            
             // Email validation
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
               alert("Please enter a valid email address.");
               return;
             }
-
+            
             // Honeypot check (anti-spam)
             if (honeypot !== "") {
-              // Silently act successful to mislead bots
+              // Silently reject spam but look successful to bots
               alert("Message sent! Thank you.");
               form.reset();
               return;
             }
-
-            // Prepare data
+            
+            // Prepare data payload
             const data = { name: name, email: email, message: message };
-
+            
             // Show loading state
             const submitButton = form.querySelector('button[type="submit"]');
             const originalText = submitButton.textContent;
             submitButton.textContent = "Sending...";
             submitButton.disabled = true;
-
-            // Azure Function endpoint (conflict-resolved change)
+            
+            // Azure Function endpoint (replaces former Power Automate URL)
             const endpoint = "https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler";
-
+            
             fetch(endpoint, {
               method: "POST",
-              headers: {
+              headers: { 
                 "Content-Type": "application/json",
                 "Accept": "application/json"
               },
@@ -365,7 +358,7 @@
             });
           });
         }
-
+        
         // Setup form handler when DOM is ready
         if (document.readyState === 'loading') {
           document.addEventListener('DOMContentLoaded', setupFormHandler);
@@ -374,10 +367,10 @@
         }
       })();
     </script>
-
+    
     <script
       type="text/javascript"
-      src="https://mbconsultllc.atlassian.net/s/d41d8cd98f00b204e9800998ecf8427e-T/vf1kch/b/0/c95134bc67d3a521bb3f4331beb9b804/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=5d6ea871"
+      src="https://mbconsultllc.atlassian.net/s/d41d8cd98f00b204e9800998ecf8427e-T/vf1kch/b/0/c95134bc67d3a521bb3f4331beb9b804/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=bb2d3f81"
     ></script>
   </body>
 </html>
