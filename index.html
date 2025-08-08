@@ -22,7 +22,7 @@
         <ul>
           <li><a href="index.html" class="active">Home</a></li>
           <li><a href="generic.html">About</a></li>
-          <li><a href="elements.html">Services &amp; Features</a></li>
+            <li><a href="elements.html">Services &amp; Features</a></li>
         </ul>
       </nav>
     </header>
@@ -218,8 +218,11 @@
                     <label for="message">Message</label>
                     <textarea name="message" id="message" rows="5" required></textarea>
                   </div>
-                  <!-- Honeypot field for anti-spam (hidden) -->
-                  <input type="text" name="company" id="company" style="display: none;" tabindex="-1" autocomplete="off" />
+                  <!-- Honeypot (hidden anti-spam) -->
+                  <div style="display:none;">
+                    <label for="company">Company</label>
+                    <input type="text" name="company" id="company" tabindex="-1" autocomplete="off" />
+                  </div>
                 </div>
                 <ul class="actions">
                   <li>
@@ -242,7 +245,7 @@
                 </li>
                 <li>
                   <h3>Email</h3>
-                  <a href="#">support@mbconsult.io</a>
+                  <a href="mailto:support@mbconsult.io">support@mbconsult.io</a>
                 </li>
                 <li>
                   <h3>Phone</h3>
@@ -272,13 +275,14 @@
     <script src="assets/js/breakpoints.min.js"></script>
     <script src="assets/js/util.js"></script>
     <script src="assets/js/main.js"></script>
-    
-    <!-- Contact form handler -->
+
+    <!-- Unified contact form handler -->
     <script src="assets/js/contact-form.js"></script>
-    
+
+    <!-- (Optional) Jira / analytics collector -->
     <script
       type="text/javascript"
-      src="https://mbconsultllc.atlassian.net/s/d41d8cd98f00b204e9800998ecf8427e-T/vf1kch/b/0/c95134bc67d3a521bb3f4331beb9b804/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=bb2d3f81"
+      src="https://mbconsultllc.atlassian.net/s/d41d8cd98f00b204e9800998ecf8427e-T/vf1kch/b/0/c95134bc67d3a521bb3f4331beb9b804/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=894d8a2f"
     ></script>
   </body>
 </html>

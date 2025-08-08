@@ -1,212 +1,128 @@
 /**
  * Unified Contact Form Handler for MB CONSULT
- * 
- * Handles form submission for all contact forms on the site with:
- * - Client-side validation
- * - CORS-enabled Azure Function integration
- * - Honeypot spam protection
- * - Unified UX states (loading, success, error)
- * - JSON error handling
+ *
+ * Finds every <form class="contact-form"> and wires submit behavior:
+ *  - Client-side validation (required + email format)
+ *  - Honeypot spam field (#company) silent success
+ *  - Graceful UI disable/restore of submit button
+ *  - Robust fetch with JSON fallback
  */
 
-(function() {
+(function () {
   'use strict';
 
   // Azure Function endpoint
-  // Azure Function endpoint is now configured via data-endpoint attribute on the form
-  
+  const ENDPOINT = "https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler";
+
   // Email validation regex
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  /**
-   * Initialize all contact forms on page load
-   */
   function initializeContactForms() {
-    const forms = document.querySelectorAll('.contact-form');
-    
-    forms.forEach(form => {
-      setupFormHandler(form);
-    });
+    const forms = document.querySelectorAll('form.contact-form');
+    forms.forEach(setupFormHandler);
   }
 
-  /**
-   * Setup form submission handler for a single form
-   */
   function setupFormHandler(form) {
-    // Remove submit class from buttons to prevent jQuery interference
-    const submitButtons = form.querySelectorAll('.submit');
-    submitButtons.forEach(button => {
-      button.classList.remove('submit');
-    });
-
-    form.addEventListener('submit', async function(e) {
+    form.addEventListener('submit', async function (e) {
       e.preventDefault();
-      await handleFormSubmission(form);
-    });
-  }
 
-  /**
-   * Handle form submission with validation and API call
-   */
-  async function handleFormSubmission(form) {
-    // Get form fields
-    const nameField = form.querySelector('#name, input[name="name"]');
-    const emailField = form.querySelector('#email, input[name="email"]');
-    const messageField = form.querySelector('#message, textarea[name="message"]');
-    const honeypotField = form.querySelector('input[name="company"]');
-    const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+      // Field resolution (support either id or name attributes)
+      const nameField = form.querySelector('#name, input[name="name"]');
+      const emailField = form.querySelector('#email, input[name="email"]');
+      const messageField = form.querySelector('#message, textarea[name="message"]');
+      const honeypotField = form.querySelector('#company, input[name="company"]');
 
-    if (!nameField || !emailField || !messageField) {
-      console.error('Contact form missing required fields');
-      return;
-    }
+      if (!nameField || !emailField || !messageField) {
+        console.error('Contact form missing required fields');
+        return;
+      }
 
-    // Get values
-    const name = nameField.value.trim();
-    const email = emailField.value.trim();
-    const message = messageField.value.trim();
-    const company = honeypotField ? honeypotField.value : '';
+      const name = (nameField.value || '').trim();
+      const email = (emailField.value || '').trim();
+      const message = (messageField.value || '').trim();
+      const honeypot = honeypotField ? (honeypotField.value || '').trim() : "";
 
-    // Client-side validation
-    clearValidationMessages();
-    
-    const errors = [];
-    
-    if (!name || name.length < 2) {
-      errors.push('Please enter your name (at least 2 characters)');
-    }
-    
-    if (!email) {
-      errors.push('Please enter your email address');
-    } else if (!emailRegex.test(email)) {
-      errors.push('Please enter a valid email address');
-    }
-    
-    if (!message || message.length < 10) {
-      errors.push('Please enter a message (at least 10 characters)');
-    }
+      // Required validation
+      if (!name || !email || !message) {
+        alert("Please fill in all required fields.");
+        return;
+      }
 
-    if (errors.length > 0) {
-      showValidationErrors(errors);
-      return;
-    }
+      // Email validation
+      if (!EMAIL_REGEX.test(email)) {
+        alert("Please enter a valid email address.");
+        return;
+      }
 
-    // Set loading state
-    setLoadingState(submitButton, true);
+      // Honeypot – silent accept
+      if (honeypot !== "") {
+        alert("Message sent! Thank you for contacting MB CONSULT.");
+        form.reset();
+        return;
+      }
 
-    try {
-      // Submit to Azure Function
-      const response = await fetch(CONTACT_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          name: name,
-          email: email,
-          message: message,
-          company: company
-        })
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        // Success
-        showSuccessMessage();
-        resetForm(form);
-      } else {
-        // Server validation errors or other issues
-        if (result.errors && Array.isArray(result.errors)) {
-          showValidationErrors(result.errors);
+      // Submit button handling
+      const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+      let originalText = "";
+      if (submitButton) {
+        originalText = submitButton.textContent !== undefined ? submitButton.textContent : submitButton.value;
+        submitButton.disabled = true;
+        if (submitButton.textContent !== undefined) {
+          submitButton.textContent = "Sending...";
         } else {
-          showErrorMessage(result.error || 'Server error occurred. Please try again.');
+          submitButton.value = "Sending...";
         }
       }
 
-    } catch (error) {
-      console.error('Contact form submission error:', error);
-      showErrorMessage('Network error. Please check your connection and try again.');
-    } finally {
-      setLoadingState(submitButton, false);
-    }
-  }
+      const payload = { name, email, message };
 
-  /**
-   * Set loading state on submit button
-   */
-  function setLoadingState(button, loading) {
-    if (!button) return;
+      try {
+        const response = await fetch(ENDPOINT, {
+          method: "POST",
+            headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
 
-    if (loading) {
-      button.dataset.originalText = button.textContent || button.value;
-      button.disabled = true;
-      
-      if (button.textContent !== undefined) {
-        button.textContent = 'Sending...';
-      } else {
-        button.value = 'Sending...';
+        if (!response.ok) {
+          throw new Error("Server responded with status: " + response.status);
+        }
+
+        let result = null;
+        try {
+          result = await response.json();
+        } catch (_) {
+          // Non-JSON; proceed as success
+        }
+
+        if (result && result.success === false) {
+          throw new Error(result.errors ? result.errors.join("; ") : (result.message || "Unknown error"));
+        }
+
+        alert("Message sent! Thank you for contacting MB CONSULT.");
+        form.reset();
+
+      } catch (err) {
+        console.error("Form submission error:", err);
+        alert("Sorry, there was an error sending your message. Please try again later or contact us directly at support@mbconsult.io");
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          if (submitButton.textContent !== undefined) {
+            submitButton.textContent = originalText;
+          } else {
+            submitButton.value = originalText;
+          }
+        }
       }
-    } else {
-      button.disabled = false;
-      const originalText = button.dataset.originalText || 'Send Message';
-      
-      if (button.textContent !== undefined) {
-        button.textContent = originalText;
-      } else {
-        button.value = originalText;
-      }
-    }
+    });
   }
 
-  /**
-   * Show validation errors to user
-   */
-  function showValidationErrors(errors) {
-    const message = errors.length === 1 ? errors[0] : 
-      'Please fix the following:\n• ' + errors.join('\n• ');
-    alert(message);
-  }
-
-  /**
-   * Show generic error message
-   */
-  function showErrorMessage(message) {
-  function showErrorMessage(message, form) {
-    // Find or create an error message container in the form
-    const errorContainer = getOrCreateErrorContainer(form);
-    errorContainer.textContent = message;
-    errorContainer.style.display = 'block';
-  }
-
-  /**
-   * Show success message
-   */
-  function showSuccessMessage() {
-    alert('Message sent! Thank you for contacting MB CONSULT. We will get back to you soon.');
-  }
-
-  /**
-   * Clear any validation messages
-   */
-  function clearValidationMessages() {
-    // Could be enhanced to clear visual validation indicators
-    // For now, just ensuring clean state for alerts
-  }
-
-  /**
-   * Reset form to initial state
-   */
-  function resetForm(form) {
-    form.reset();
-  }
-
-  // Initialize when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeContactForms);
   } else {
     initializeContactForms();
   }
-
 })();
