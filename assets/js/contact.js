@@ -74,99 +74,124 @@ function initializeContactForm(form, nameField, emailField, messageField) {
     // Find submit button
     const submitButton = form.querySelector('button[type="submit"], input[type="submit"], .button.submit');
     
-    // Add form submission handler
-    form.addEventListener('submit', async function(e) {
-        e.preventDefault();
+    // Override the jQuery click handler for submit buttons in this form
+    // The main.js file intercepts clicks on .submit and calls form.submit() directly
+    // We need to prevent that and use our own handler
+    if (submitButton && submitButton.classList.contains('submit')) {
+        // Remove any existing jQuery event handlers by cloning and replacing the button
+        // This is necessary because jQuery's click handler bypasses form submit events
+        const newButton = submitButton.cloneNode(true);
+        submitButton.parentNode.replaceChild(newButton, submitButton);
         
-        // Anti-bot timing check - ignore submissions < 300ms after page load
-        const timeSinceLoad = Date.now() - pageLoadTime;
-        if (timeSinceLoad < 300) {
-            // Silent success for obvious bots
+        // Add our click handler to the new button
+        newButton.addEventListener('click', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Call our submit handler
+            await handleFormSubmission(form, nameField, emailField, messageField, newButton, honeypotField);
+        });
+    } else {
+        // For forms without .submit class, use regular form submit handler
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await handleFormSubmission(form, nameField, emailField, messageField, submitButton, honeypotField);
+        });
+    }
+}
+
+/**
+ * Handle form submission with all validation and API call
+ */
+async function handleFormSubmission(form, nameField, emailField, messageField, submitButton, honeypotField) {
+    // Anti-bot timing check - ignore submissions < 300ms after page load
+    const timeSinceLoad = Date.now() - pageLoadTime;
+    if (timeSinceLoad < 300) {
+        // Silent success for obvious bots
+        showSuccessMessage();
+        resetForm(form, submitButton);
+        return;
+    }
+    
+    // Honeypot check - if company field is filled, it's spam
+    if (honeypotField.value.trim() !== '') {
+        // Silent success for spam
+        showSuccessMessage();
+        resetForm(form, submitButton);
+        return;
+    }
+    
+    // Get form data
+    const name = nameField.value.trim();
+    const email = emailField.value.trim();
+    const message = messageField.value.trim();
+    
+    // Validate required fields
+    if (!name || !email || !message) {
+        alert('Please fill in all fields.');
+        return;
+    }
+    
+    // Validate email format
+    if (!emailRegex.test(email)) {
+        alert('Please enter a valid email address.');
+        return;
+    }
+    
+    // Disable submit button during submission
+    if (submitButton) {
+        submitButton.disabled = true;
+        const originalText = submitButton.textContent || submitButton.value;
+        if (submitButton.textContent !== undefined) {
+            submitButton.textContent = 'Sending...';
+        } else {
+            submitButton.value = 'Sending...';
+        }
+        
+        // Store original text for restoration
+        submitButton.dataset.originalText = originalText;
+    }
+    
+    try {
+        // Submit to Power Automate Flow
+        const response = await fetch(FLOW_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                email: email,
+                message: message
+            })
+        });
+        
+        // Handle response
+        if (response.ok || response.status === 202) {
+            // Success (200 OK or 202 Accepted)
             showSuccessMessage();
             resetForm(form, submitButton);
-            return;
+        } else {
+            // HTTP error
+            throw new Error(`Server responded with status ${response.status}`);
         }
         
-        // Honeypot check - if company field is filled, it's spam
-        if (honeypotField.value.trim() !== '') {
-            // Silent success for spam
-            showSuccessMessage();
-            resetForm(form, submitButton);
-            return;
-        }
+    } catch (error) {
+        // Network error or other failure
+        console.error('Contact form submission error:', error);
+        alert('Oops, something went wrong. Please try again or contact us directly.');
         
-        // Get form data
-        const name = nameField.value.trim();
-        const email = emailField.value.trim();
-        const message = messageField.value.trim();
-        
-        // Validate required fields
-        if (!name || !email || !message) {
-            alert('Please fill in all fields.');
-            return;
-        }
-        
-        // Validate email format
-        if (!emailRegex.test(email)) {
-            alert('Please enter a valid email address.');
-            return;
-        }
-        
-        // Disable submit button during submission
+        // Re-enable submit button
         if (submitButton) {
-            submitButton.disabled = true;
-            const originalText = submitButton.textContent || submitButton.value;
+            submitButton.disabled = false;
+            const originalText = submitButton.dataset.originalText || 'Send Message';
             if (submitButton.textContent !== undefined) {
-                submitButton.textContent = 'Sending...';
+                submitButton.textContent = originalText;
             } else {
-                submitButton.value = 'Sending...';
-            }
-            
-            // Store original text for restoration
-            submitButton.dataset.originalText = originalText;
-        }
-        
-        try {
-            // Submit to Power Automate Flow
-            const response = await fetch(FLOW_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: name,
-                    email: email,
-                    message: message
-                })
-            });
-            
-            // Handle response
-            if (response.ok || response.status === 202) {
-                // Success (200 OK or 202 Accepted)
-                showSuccessMessage();
-                resetForm(form, submitButton);
-            } else {
-                // HTTP error
-                throw new Error(`Server responded with status ${response.status}`);
-            }
-            
-        } catch (error) {
-            // Network error or other failure
-            console.error('Contact form submission error:', error);
-            alert('Oops, something went wrong. Please try again or contact us directly.');
-            
-            // Re-enable submit button
-            if (submitButton) {
-                submitButton.disabled = false;
-                const originalText = submitButton.dataset.originalText || 'Send Message';
-                if (submitButton.textContent !== undefined) {
-                    submitButton.textContent = originalText;
-                } else {
-                    submitButton.value = originalText;
-                }
+                submitButton.value = originalText;
             }
         }
-    });
+    }
 }
 
 /**
