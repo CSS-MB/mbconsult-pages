@@ -13,7 +13,7 @@
   'use strict';
 
   // Azure Function endpoint
-  const CONTACT_ENDPOINT = "https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler";
+  // Azure Function endpoint is now configured via data-endpoint attribute on the form
   
   // Email validation regex
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
