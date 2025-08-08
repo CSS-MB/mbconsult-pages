@@ -146,9 +146,7 @@
                     email: document.getElementById("email").value,
                     message: document.getElementById("message").value,
                   };
-                  // ← REPLACE this string with your Power Automate POST URL:
-                  const endpoint =
-                    "https://defaultb72c4bc8430f4822b477a1ae1f3c52.8e.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/ff27c97daac44c7a9f61a61214abed16/triggers/manual/paths/invoke/?api-version=1";
+                  const endpoint = "/api/ContactFormHandler";
                   const response = await fetch(endpoint, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
