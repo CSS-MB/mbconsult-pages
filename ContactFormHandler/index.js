@@ -41,7 +41,14 @@ module.exports = async function (context, req) {
       return;
     }
 
-    const { name, email, message } = req.body || {};
+    const { name, email, message, company } = req.body || {};
+
+    // Honeypot check (anti-spam) - if company field is filled, silently reject
+    if (company && typeof company === "string" && company.trim() !== "") {
+      // Return success to bots to avoid fueling retries, but don't send email
+      context.res = buildResponse(200, { success: true, message: "Email sent successfully." });
+      return;
+    }
 
     // Server-side validation (never trust client)
     const errors = [];
