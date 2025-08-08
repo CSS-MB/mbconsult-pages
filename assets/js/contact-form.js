@@ -37,7 +37,9 @@
       // Get form data
       const nameField = form.querySelector('input[name="name"]');
       const emailField = form.querySelector('input[name="email"]');
-      const messageField = form.querySelector('textarea[name="message"]');
+      const nameField = form.querySelector('#name');
+      const emailField = form.querySelector('#email');
+      const messageField = form.querySelector('#message');
       const honeypotField = form.querySelector('#company');
       
       if (!nameField || !emailField || !messageField) {
