@@ -145,7 +145,7 @@
                     email: document.getElementById("email").value,
                     message: document.getElementById("message").value,
                   };
-                  const endpoint = "https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler";
+                  const endpoint = document.querySelector('meta[name="contact-form-endpoint"]').content;
                   const response = await fetch(endpoint, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
