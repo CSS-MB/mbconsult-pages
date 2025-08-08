@@ -252,13 +252,13 @@
             
             // Honeypot check (anti-spam)
             if (honeypot !== "") {
-              // Silently reject spam
+              // Silently reject spam but appear successful
               alert("Message sent! Thank you.");
               form.reset();
               return;
             }
             
-            // Prepare data for Power Automate
+            // Prepare data payload
             const data = { name: name, email: email, message: message };
             
             // Show loading state
@@ -267,8 +267,8 @@
             submitButton.value = "Sending...";
             submitButton.disabled = true;
             
-            // Power Automate Flow endpoint
-            const endpoint = "https://defaultb72c4bc8430f4822b477a1ae1f3c52.8e.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/126065c601a24faaa4d2fe201b152980/triggers/manual/paths/invoke/?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-jezMV5QDTQ5AnlEY-17zMGXzR00wGyEBpbizVj5gXw";
+            // Azure Function endpoint (replaces former Power Automate URL)
+            const endpoint = "https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler";
             
             fetch(endpoint, {
               method: "POST",
@@ -313,4 +313,3 @@
     ></script>
   </body>
 </html>
-
