@@ -61,7 +61,7 @@ jobs:
           -X POST \
           -H "Content-Type: application/json" \
           -d '{"name":"Test","email":"test@example.com","message":"Deployment test"}' \
-          "$FUNCTION_URL" || echo "000")
+          "$FUNCTION_URL" || echo "$CONNECTION_FAILURE_STATUS")
         
         echo "HTTP Status: $HTTP_STATUS"
         
