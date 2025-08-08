@@ -20,7 +20,9 @@
  */
 
 // Power Automate Flow endpoint - rotate this if abuse occurs
-const FLOW_URL = 'https://defaultb72c4bc8430f4822b477a1ae1f3c52.8e.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/126065c601a24faaa4d2fe201b152980/triggers/manual/paths/invoke/?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-jezMV5QDTQ5AnlEY-17zMGXzR00wGyEBpbizVj5gXw';
+// Contact form proxy endpoint (forwards to Power Automate Flow server-side)
+// The real Flow URL and secret are stored securely on the server.
+const FLOW_URL = '/api/contact-proxy';
 
 // Track page load time for anti-bot timing check
 const pageLoadTime = Date.now();
