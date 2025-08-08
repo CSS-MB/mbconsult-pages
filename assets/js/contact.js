@@ -136,7 +136,18 @@ async function handleFormSubmission(form, nameField, emailField, messageField, s
     
     // Validate email format
     if (!emailRegex.test(email)) {
-        alert('Please enter a valid email address.');
+    // Clear any previous validation message
+    clearValidationMessage(form);
+
+    // Validate required fields
+    if (!name || !email || !message) {
+        showValidationMessage(form, 'Please fill in all fields.');
+        return;
+    }
+    
+    // Validate email format
+    if (!emailRegex.test(email)) {
+        showValidationMessage(form, 'Please enter a valid email address.');
         return;
     }
     
