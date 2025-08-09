@@ -1,100 +1,69 @@
-const nodemailer = require("nodemailer");
+# Docs for the Azure Web Apps Deploy action: https://github.com/azure/functions-action
+# More GitHub Actions for Azure: https://github.com/Azure/actions
 
-// Central CORS header set so we don't repeat strings.
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://mbconsult.io", // Use specific domain; switch to "*" only if you must.
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Accept",
-  "Access-Control-Max-Age": "86400"
-};
+name: Build and deploy Node.js project to Azure Function App - mbconsult-function-app
 
-// Basic email pattern (not exhaustive but adequate server-side guard).
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
-// Helper: build response
-function buildResponse(status, bodyObj) {
-  return {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      ...CORS_HEADERS
-    },
-    body: JSON.stringify(bodyObj)
-  };
-}
+env:
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
+  NODE_VERSION: '20.x' # set this to the node version to use (supports 8.x, 10.x, 12.x)
 
-module.exports = async function (context, req) {
-  try {
-    // Handle preflight
-    if (req.method === "OPTIONS") {
-      context.res = {
-        status: 204,
-        headers: {
-          ...CORS_HEADERS
-        }
-      };
-      return;
-    }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
 
-    if (req.method !== "POST") {
-      context.res = buildResponse(405, { error: "Method Not Allowed" });
-      return;
-    }
+    steps:
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@v4
 
-    const { name, email, message, company } = req.body || {};
+      - name: Setup Node ${{ env.NODE_VERSION }} Environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
-    // Honeypot check (anti-spam) - if company field is filled, silently reject
-    if (company && typeof company === "string" && company.trim() !== "") {
-      // Return success to bots to avoid fueling retries, but don't send email
-      context.res = buildResponse(200, { success: true, message: "Email sent successfully." });
-      return;
-    }
+      - name: 'Resolve Project Dependencies Using Npm'
+        shell: bash
+        run: |
+          pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
+          npm install
+          npm run build --if-present
+          npm run test --if-present
+          popd
 
-    // Server-side validation (never trust client)
-    const errors = [];
-    if (!name || typeof name !== "string" || name.trim().length < 2) {
-      errors.push("Invalid name.");
-    }
-    if (!email || typeof email !== "string" || !EMAIL_REGEX.test(email)) {
-      errors.push("Invalid email.");
-    }
-    if (!message || typeof message !== "string" || message.trim().length < 5) {
-      errors.push("Invalid message.");
-    }
+      - name: Zip artifact for deployment
+        run: zip release.zip ./* -r
 
-    if (errors.length) {
-      context.res = buildResponse(400, { success: false, errors });
-      return;
-    }
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-app
+          path: release.zip
 
-    // Nodemailer transporter
-    const transporter = nodemailer.createTransport({
-      host: "smtp.office365.com",
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.OFFICE365_USER,
-        pass: process.env.OFFICE365_PASS
-      }
-    });
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app
 
-    const mailOptions = {
-      from: process.env.OFFICE365_USER,
-      to: "mathew@mbconsult.io",
-      subject: `Contact Form Submission from ${name}`,
-      text: [
-        `Name: ${name}`,
-        `Email: ${email}`,
-        `Message:`,
-        message
-      ].join("\n")
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    context.res = buildResponse(200, { success: true, message: "Email sent successfully." });
-  } catch (err) {
-    context.log.error("ContactFormHandler error:", err);
-    context.res = buildResponse(500, { success: false, error: "Failed to send email." });
-  }
-};
+      - name: Unzip artifact for deployment
+        run: unzip release.zip
+      
+      - name: 'Run Azure Functions Action'
+        uses: Azure/functions-action@v1
+        id: fa
+        with:
+          app-name: 'mbconsult-function-app'
+          slot-name: 'Production'
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
