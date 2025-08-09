@@ -1,0 +1,92 @@
+name: Deploy Azure Functions with OIDC
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'ContactFormHandler/**'
+      - 'host.json'
+      - 'package.json'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_FUNCTIONAPP_NAME: 'mbconsult-function-app'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
+  NODE_VERSION: '20.x'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@v4
+
+    - name: Setup Node ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    # Build step (commented out - uncomment if build is required)
+    # - name: 'Resolve Project Dependencies Using Npm'
+    #   shell: bash
+    #   run: |
+    #     pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
+    #     if [ -f package-lock.json ]; then
+    #       npm ci
+    #     else
+    #       npm install
+    #     fi
+    #     npm run build --if-present
+    #     npm run test --if-present
+    #     popd
+
+    - name: 'Azure Login using OIDC'
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: 'Run Azure Functions Action'
+      uses: Azure/functions-action@v1
+      id: fa
+      with:
+        app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+        package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+        respect-funcignore: true
+        scm-do-build-during-deployment: false
+        enable-oryx-build: false
+        remote-build: false
+
+    - name: 'Smoke Test Function Endpoint'
+      shell: bash
+      run: |
+        echo "Testing function endpoint accessibility..."
+        # Get the function URL from the action output or construct it
+        FUNCTION_URL="https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net/api/ContactFormHandler"
+        
+        # Perform a basic POST request to test endpoint accessibility
+        # We expect either 200 (success), 400 (validation error), or 500 (SMTP not configured)
+        # All indicate the function is deployed and accessible
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          -X POST \
+          -H "Content-Type: application/json" \
+          -d '{"name":"Test","email":"test@example.com","message":"Deployment test"}' \
+          "$FUNCTION_URL" || echo "000")
+        
+        echo "HTTP Status: $HTTP_STATUS"
+        
+        if [[ "$HTTP_STATUS" =~ ^(200|400|500)$ ]]; then
+          echo "✅ Function endpoint is accessible (HTTP $HTTP_STATUS)"
+          exit 0
+        else
+          echo "❌ Function endpoint test failed (HTTP $HTTP_STATUS)"
+          exit 1
+        fi
