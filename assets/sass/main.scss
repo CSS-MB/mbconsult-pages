@@ -53,3 +53,8 @@
 @import 'layout/footer';
 @import 'layout/sidebar';
 @import 'layout/intro';
+
+// Honeypot hidden field (anti-spam)
+.hp-field {
+  display: none !important;
+}
