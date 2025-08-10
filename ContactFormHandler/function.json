@@ -5,8 +5,8 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "req",
-      "methods": [ "post", "options" ],
-      "route": "api/ContactFormHandler"
+      "methods": ["post", "options"],
+      "route": "ContactFormHandler"
     },
     {
       "type": "http",

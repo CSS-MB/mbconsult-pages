@@ -1,186 +1,346 @@
+/**
+ * MB CONSULT — ContactFormHandler
+ * Azure Functions v4 (Node 20, Linux)
+ *
+ * Features:
+ *   - CORS (OPTIONS preflight + response headers), origin allowlist
+ *   - JSON-only POST; size cap; strict schema validation
+ *   - Honeypot field ("company") → silent success (no email) to waste bot cycles
+ *   - Rate-limit guard (simple per-IP cooldown in-memory best-effort)
+ *   - Office 365 SMTP via Nodemailer (TLS 587), optional DKIM
+ *   - Clear, structured JSON responses and detailed server logs
+ *
+ * Required App Settings:
+ *   - TO_EMAIL                (recipient email)
+ *   - FROM_EMAIL              (envelope/from)
+ *   - OFFICE365_USER          (SMTP user; typically same as FROM_EMAIL)
+ *   - OFFICE365_PASS          (SMTP password)
+ *
+ * Optional App Settings:
+ *   - CORS_ORIGINS            (comma-separated allowlist; e.g. "https://mbconsult.io,https://www.mbconsult.io")
+ *   - SUBJECT_PREFIX          (e.g., "[MB CONSULT Contact]")
+ *   - SMTP_HOST               (default smtp.office365.com)
+ *   - SMTP_PORT               (default 587)
+ *   - SMTP_SECURE             ("true" to force SMTPS; default false)
+ *   - DKIM_DOMAIN, DKIM_SELECTOR, DKIM_PRIVATE_KEY (PEM)  // optional
+ *   - MIN_MESSAGE_LENGTH      (default 10)
+ *   - MAX_MESSAGE_LENGTH      (default 4000)
+ *   - MAX_NAME_LENGTH         (default 200)
+ *   - RATE_LIMIT_SECONDS      (default 60)
+ */
+
 const nodemailer = require("nodemailer");
-const validator = require("validator"); // Import validator for isIP usage
+const validator = require("validator");
 
-// Central CORS header set so we don't repeat strings.
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin":
-    process.env.CORS_ORIGIN || "https://mbconsult.io", // Use env var or fallback to default.
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Accept",
-  "Access-Control-Max-Age": "86400",
-};
+// -----------------------------
+// CORS
+// -----------------------------
+const DEFAULT_ORIGINS = ["https://mbconsult.io", "https://www.mbconsult.io"];
+const ALLOWLIST = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const ALLOWED_ORIGINS = ALLOWLIST.length ? ALLOWLIST : DEFAULT_ORIGINS;
 
-// Basic email pattern (not exhaustive but adequate server-side guard).
-// Use validator.isEmail directly for email validation.
+function pickCorsOrigin(req) {
+  const origin =
+    (req.headers && (req.headers.origin || req.headers.Origin)) || "";
+  if (!origin) return ALLOWED_ORIGINS[0];
+  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+}
 
-// Helper: build response
-function buildResponse(status, bodyObj) {
+function corsHeaders(req) {
+  return {
+    "Access-Control-Allow-Origin": pickCorsOrigin(req),
+    Vary: "Origin",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Accept",
+    "Access-Control-Max-Age": "86400",
+  };
+}
+
+function buildResponse(status, bodyObj, req) {
   return {
     status,
     headers: {
       "Content-Type": "application/json",
-      ...CORS_HEADERS,
+      ...corsHeaders(req),
     },
     body: JSON.stringify(bodyObj),
   };
 }
 
+// -----------------------------
+// Limits & Validation
+// -----------------------------
+const MAX_MESSAGE_LENGTH = parseInt(
+  process.env.MAX_MESSAGE_LENGTH || "4000",
+  10
+);
+const MIN_MESSAGE_LENGTH = parseInt(process.env.MIN_MESSAGE_LENGTH || "10", 10);
+const MAX_NAME_LENGTH = parseInt(process.env.MAX_NAME_LENGTH || "200", 10);
+const MAX_JSON_BYTES = 1024 * 32; // 32KB JSON limit (defense-in-depth)
+
+function getClientIp(req) {
+  return (
+    (req.headers &&
+      (req.headers["x-forwarded-for"] || req.headers["X-Forwarded-For"])) ||
+    req.ip ||
+    req.headers?.["x-appservice-proto"] ||
+    "unknown"
+  );
+}
+
+function parseBody(req) {
+  if (!req || typeof req.body === "undefined" || req.body === null) return null;
+  if (typeof req.body === "object") return req.body;
+  if (typeof req.body === "string") {
+    if (req.body.length > MAX_JSON_BYTES) return null;
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function sanitizeString(s, max) {
+  if (!s || typeof s !== "string") return "";
+  const trimmed = s.trim();
+  return trimmed.slice(0, max);
+}
+
+function validatePayload(payload) {
+  const errors = [];
+
+  const name = sanitizeString(payload.name, MAX_NAME_LENGTH);
+  const email = sanitizeString(payload.email, 320);
+  const message = sanitizeString(payload.message, MAX_MESSAGE_LENGTH);
+  const company = sanitizeString(payload.company, 256); // honeypot: if present → bot
+
+  if (!name) errors.push("name is required");
+  if (!email || !validator.isEmail(email))
+    errors.push("valid email is required");
+  if (!message || message.length < MIN_MESSAGE_LENGTH)
+    errors.push(`message must be at least ${MIN_MESSAGE_LENGTH} characters`);
+  if (company) errors.push("honeypot hit"); // will be treated as bot (we'll fake success)
+
+  return { name, email, message, company, errors };
+}
+
+// -----------------------------
+// Rate-limit (best-effort)
+// -----------------------------
+const RATE_LIMIT_SECONDS = parseInt(process.env.RATE_LIMIT_SECONDS || "60", 10);
+const ipCooldown = new Map(); // { ip -> epochSeconds }
+
+function isRateLimited(ip) {
+  if (!ip || ip === "unknown") return false;
+  const now = Math.floor(Date.now() / 1000);
+  const until = ipCooldown.get(ip) || 0;
+  return until > now;
+}
+function setCooldown(ip) {
+  if (!ip || ip === "unknown") return;
+  const now = Math.floor(Date.now() / 1000);
+  ipCooldown.set(ip, now + RATE_LIMIT_SECONDS);
+}
+
+// -----------------------------
+// Mail Transport (Office 365 by default)
+// -----------------------------
+function buildTransport() {
+  const host = process.env.SMTP_HOST || "smtp.office365.com";
+  const port = parseInt(process.env.SMTP_PORT || "587", 10);
+  const secure =
+    String(process.env.SMTP_SECURE || "false").toLowerCase() === "true";
+  const user = process.env.OFFICE365_USER || process.env.SMTP_USER;
+  const pass = process.env.OFFICE365_PASS || process.env.SMTP_PASS;
+
+  if (!user || !pass)
+    throw new Error(
+      "SMTP credentials missing: set OFFICE365_USER and OFFICE365_PASS"
+    );
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+    tls: { ciphers: "TLSv1.2", minVersion: "TLSv1.2" },
+  });
+
+  // Optional DKIM
+  const dkimDomain = process.env.DKIM_DOMAIN;
+  const dkimSelector = process.env.DKIM_SELECTOR;
+  const dkimKey = process.env.DKIM_PRIVATE_KEY;
+  if (dkimDomain && dkimSelector && dkimKey) {
+    transporter.use("stream", (mail, done) => {
+      mail.message.options.dkim = {
+        domainName: dkimDomain,
+        keySelector: dkimSelector,
+        privateKey: dkimKey,
+      };
+      done();
+    });
+  }
+
+  return transporter;
+}
+
+async function sendMail({ from, to, subject, text, html }) {
+  const transporter = buildTransport();
+  return transporter.sendMail({ from, to, subject, text, html });
+}
+
+// -----------------------------
+// Handler
+// -----------------------------
 module.exports = async function (context, req) {
   try {
-    // Handle CORS preflight (OPTIONS) requests.
-    // 204 No Content is used instead of 200 to indicate a successful request with no response body,
-    // which is the correct response for CORS preflight requests.
-    if (req.method === "OPTIONS") {
+    // OPTIONS → preflight
+    if ((req.method || "").toUpperCase() === "OPTIONS") {
+      context.log.info("CORS preflight");
       context.res = {
         status: 204,
-        headers: {
-          ...CORS_HEADERS,
-        },
+        headers: corsHeaders(req),
+        body: "",
       };
       return;
     }
 
-    if (req.method !== "POST") {
-      context.res = buildResponse(405, { error: "Method Not Allowed" });
+    // Content-Type guard
+    const ct =
+      (req.headers &&
+        (req.headers["content-type"] || req.headers["Content-Type"])) ||
+      "";
+    if (!ct.toLowerCase().includes("application/json")) {
+      context.res = buildResponse(
+        415,
+        { success: false, error: "Content-Type must be application/json" },
+        req
+      );
       return;
     }
 
-    const { name, email, message, company } =
-      typeof req.body === "object" && req.body !== null ? req.body : {};
-
-    // Honeypot check (anti-spam) - if company field is filled, silently reject
-    if (company && typeof company === "string" && company.trim() !== "") {
-      // Return success to bots to avoid fueling retries, but don't send email
-      context.res = buildResponse(200, {
-        success: true,
-        message: "Email sent successfully.",
-      });
+    // Parse & validate
+    const ip = getClientIp(req);
+    if (isRateLimited(ip)) {
+      context.log.warn(`Rate-limited IP: ${ip}`);
+      context.res = buildResponse(
+        429,
+        { success: false, error: "Too many requests, slow down." },
+        req
+      );
       return;
     }
 
-    const errors = [];
-    if (!name || typeof name !== "string" || name.trim().length < 2) {
-      errors.push("Invalid name.");
+    const payload = parseBody(req);
+    if (!payload) {
+      context.res = buildResponse(
+        400,
+        { success: false, error: "Invalid or missing JSON body" },
+        req
+      );
+      return;
     }
-    if (!email || typeof email !== "string" || !validator.isEmail(email)) {
-      errors.push("Invalid email.");
-    }
-    if (!message || typeof message !== "string" || message.trim().length < 5) {
-      errors.push("Invalid message.");
+
+    const { name, email, message, company, errors } = validatePayload(payload);
+
+    // Honeypot: silently succeed to fool bots (do NOT email)
+    if (company) {
+      context.log.warn(`Honeypot hit from IP ${ip}; company='${company}'`);
+      // Deliberate small delay to waste bot time
+      await new Promise((r) => setTimeout(r, 700));
+      context.res = buildResponse(200, { success: true }, req);
+      return;
     }
 
     if (errors.length) {
-      context.res = buildResponse(400, { success: false, errors });
+      context.res = buildResponse(400, { success: false, errors }, req);
       return;
     }
 
-    // Ensure OFFICE365_USER and CONTACTFORM_RECIPIENT are set
-    if (!process.env.OFFICE365_USER) {
-      context.res = buildResponse(500, {
-        success: false,
-        error: "Email sender is not configured.",
-      });
-      return;
-    }
-    if (!process.env.CONTACTFORM_RECIPIENT) {
-      context.res = buildResponse(500, {
-        success: false,
-        error: "Recipient email is not configured.",
-      });
+    // Build mail content
+    const to = process.env.TO_EMAIL;
+    const from = process.env.FROM_EMAIL || process.env.OFFICE365_USER;
+    if (!to || !from) {
+      context.log.error("Missing TO_EMAIL or FROM_EMAIL settings");
+      context.res = buildResponse(
+        500,
+        { success: false, error: "Server misconfiguration" },
+        req
+      );
       return;
     }
 
-    // Ensure OFFICE365_PASS is set
-    if (!process.env.OFFICE365_PASS) {
-      context.res = buildResponse(500, {
-        success: false,
-        error: "Email password is not configured.",
-      });
-      return;
-    }
+    const subjectPrefix = process.env.SUBJECT_PREFIX || "[MB CONSULT Contact]";
+    const subject = `${subjectPrefix} ${name} <${email}>`;
+    const plain = [
+      `New contact form submission`,
+      ``,
+      `Name:    ${name}`,
+      `Email:   ${email}`,
+      `IP:      ${ip}`,
+      ``,
+      `Message:`,
+      message,
+    ].join("\n");
 
-    // SMTP configuration - uses environment variables for secrets
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.office365.com",
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.OFFICE365_USER,
-        pass: process.env.OFFICE365_PASS,
-      },
+    const safeHtml = `
+      <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;line-height:1.4">
+        <h3 style="margin:0 0 8px">New contact form submission</h3>
+        <table style="border-collapse:collapse;margin-bottom:12px">
+          <tr><td style="padding:2px 6px;color:#666">Name</td><td style="padding:2px 6px">${escapeHtml(
+            name
+          )}</td></tr>
+          <tr><td style="padding:2px 6px;color:#666">Email</td><td style="padding:2px 6px">${escapeHtml(
+            email
+          )}</td></tr>
+          <tr><td style="padding:2px 6px;color:#666">IP</td><td style="padding:2px 6px">${escapeHtml(
+            ip
+          )}</td></tr>
+        </table>
+        <div style="white-space:pre-wrap;border:1px solid #eee;padding:8px;border-radius:6px;background:#fafafa">${escapeHtml(
+          message
+        )}</div>
+      </div>
+    `;
+
+    // Send
+    const info = await sendMail({
+      from,
+      to,
+      subject,
+      text: plain,
+      html: safeHtml,
     });
 
-    // Extract IP address if available (Azure Functions: req.headers["x-forwarded-for"] or req.ip)
-    function getValidIp(ip) {
-      // Use validator's isIP for strict IPv4/IPv6 validation
-      return ip && validator.isIP(ip) ? ip : "Unknown";
-    }
-    let rawIp = "Unknown";
-    if (
-      req.headers &&
-      typeof req.headers["x-forwarded-for"] === "string" &&
-      req.headers["x-forwarded-for"].trim() !== ""
-    ) {
-      rawIp = req.headers["x-forwarded-for"].split(",")[0].trim();
-    } else if (req.ip && typeof req.ip === "string" && req.ip.trim() !== "") {
-      rawIp = req.ip;
-    } else {
-      context.log.warn(
-        "Unable to determine client IP: missing x-forwarded-for and req.ip"
-      );
-    }
-    const userIp = getValidIp(rawIp);
-    const userAgent = (req.headers && req.headers["user-agent"]) || "Unknown";
-
-    // Prepare mail options
-    // Note: The 'name' field is validated above to prevent header injection.
-    // As an extra precaution, strip CR/LF characters from 'name' to prevent header injection if validation is bypassed.
-    const safeName = name.replace(/[\r\n]+/g, " ").trim();
-    const mailOptions = {
-      from: process.env.OFFICE365_USER,
-      to: process.env.CONTACTFORM_RECIPIENT,
-      subject: "New Contact Form Submission",
-      text: [
-        `Name: ${safeName}`,
-        `Email: ${email}`,
-        `IP: ${userIp}`,
-        `User-Agent: ${userAgent}`,
-        `Message:`,
-        message,
-      ].join("\n"),
-    };
-
-    try {
-      await transporter.sendMail(mailOptions);
-    } catch (mailErr) {
-      context.log.error(
-        `Failed to send email to ${mailOptions.to} with subject "${mailOptions.subject}":`,
-        mailErr
-      );
-      // Wrap the original error for better diagnostics
-      const customError = new Error(
-        `ContactFormHandler: Failed to send email. Original error: ${mailErr.message}`
-      );
-      customError.originalError = mailErr;
-      throw customError; // Rethrow to be handled by the outer catch
-    }
-
-    context.res = buildResponse(200, {
-      success: true,
-      message: "Email sent successfully.",
-    });
-    // Catch-all for unexpected errors: logs for diagnostics and returns generic failure.
+    context.log.info(
+      `Mail sent: messageId=${info.messageId || "n/a"} to=${to}`
+    );
+    setCooldown(ip);
+    context.res = buildResponse(200, { success: true }, req);
   } catch (err) {
     context.log.error(
-      `ContactFormHandler error: method=${req.method}, ip=${
-        (req.headers && req.headers["x-forwarded-for"]) || req.ip || "Unknown"
-      }, userAgent=${(req.headers && req.headers["user-agent"]) || "Unknown"}`,
-      err
+      `ContactFormHandler error: method=${req.method}, ip=${getClientIp(req)}`,
+      err && (err.stack || err.message || err)
     );
-    context.res = buildResponse(500, {
-      success: false,
-      error: "Failed to send email.",
-    });
+    context.res = buildResponse(
+      500,
+      { success: false, error: "Failed to send email." },
+      req
+    );
   }
 };
 
+// -----------------------------
+// Helpers
+// -----------------------------
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}

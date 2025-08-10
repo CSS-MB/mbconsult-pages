@@ -1,0 +1,15 @@
+{
+  "name": "contact-form-handler",
+  "version": "1.0.0",
+  "description": "MB CONSULT contact form handler (Azure Functions v4, Node 20)",
+  "main": "index.js",
+  "type": "commonjs",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.13",
+    "validator": "^13.11.0"
+  }
+}
