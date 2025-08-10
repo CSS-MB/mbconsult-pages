@@ -58,7 +58,6 @@ module.exports = async function (context, req) {
       return;
     }
 
-    // Server-side validation (never trust client)
     const errors = [];
     if (!name || typeof name !== "string" || name.trim().length < 2) {
       errors.push("Invalid name.");
@@ -100,7 +99,7 @@ module.exports = async function (context, req) {
       return;
     }
 
-    // Nodemailer transporter
+    // SMTP configuration - uses environment variables for secrets
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.office365.com",
       port: 587,
@@ -184,3 +183,4 @@ module.exports = async function (context, req) {
     });
   }
 };
+
