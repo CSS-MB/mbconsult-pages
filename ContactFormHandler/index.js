@@ -1,69 +1,47 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/azure/functions-action
-# More GitHub Actions for Azure: https://github.com/Azure/actions
+module.exports = async function (context, req) {
+    context.log('HTTP trigger function received a request.');
 
-name: Build and deploy Node.js project to Azure Function App - mbconsult-function-app
+    // Enable CORS for browser clients
+    context.res = context.res || {};
+    context.res.headers = context.res.headers || {};
+    context.res.headers['Access-Control-Allow-Origin'] = 'https://mbconsult.io'; // set to your prod domain
+    context.res.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS';
+    context.res.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept';
 
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+    // Handle OPTIONS preflight
+    if (req.method === 'OPTIONS') {
+        context.res.status = 204;
+        context.done();
+        return;
+    }
 
-env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
-  NODE_VERSION: '20.x' # set this to the node version to use (supports 8.x, 10.x, 12.x)
+    // Parse and validate incoming data
+    const { name, email, message, company } = req.body || {};
+    if (company) {
+        // Honeypot spam trap: silent success
+        context.res = {
+            status: 200,
+            body: { success: true }
+        };
+        return;
+    }
+    const errors = [];
+    if (!name || typeof name !== 'string' || !name.trim()) errors.push('Name is required.');
+    if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Valid email is required.');
+    if (!message || typeof message !== 'string' || !message.trim()) errors.push('Message is required.');
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read #This is required for actions/checkout
+    if (errors.length) {
+        context.res = {
+            status: 400,
+            body: { success: false, errors }
+        };
+        return;
+    }
 
-    steps:
-      - name: 'Checkout GitHub Action'
-        uses: actions/checkout@v4
-
-      - name: Setup Node ${{ env.NODE_VERSION }} Environment
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: 'Resolve Project Dependencies Using Npm'
-        shell: bash
-        run: |
-          pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
-          npm install
-          npm run build --if-present
-          npm run test --if-present
-          popd
-
-      - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
-
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: node-app
-          path: release.zip
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: node-app
-
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
-      
-      - name: 'Run Azure Functions Action'
-        uses: Azure/functions-action@v1
-        id: fa
-        with:
-          app-name: 'mbconsult-function-app'
-          slot-name: 'Production'
-          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+    // TODO: Implement email sending (via SMTP, SendGrid, or relay to Power Automate)
+    // For now, just simulate success:
+    context.res = {
+        status: 200,
+        body: { success: true, message: "Your message has been received." }
+    };
+};
