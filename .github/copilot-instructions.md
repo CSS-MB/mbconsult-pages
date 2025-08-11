@@ -212,6 +212,9 @@ python3 -m http.server 8000
 # Auto-reload server
 live-server --port=8080 --host=localhost --no-browser
 
+# Start local development server
+npm start
+
 # Compile SASS
 sass assets/sass/main.scss assets/css/main.css
 
@@ -221,6 +224,12 @@ sass --watch assets/sass/main.scss:assets/css/main.css
 # Validate HTML
 htmlhint *.html
 
+# Run E2E tests (requires local server running)
+npm test
+
+# Open Cypress test runner
+npm run test:open
+
 # Backend curl test
 curl -i \
   -H "Origin: https://www.mbconsult.io" \
@@ -228,6 +237,28 @@ curl -i \
   -d '{"name":"Test User","email":"test@example.com","message":"Hello from curl"}' \
   https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler
 ```
+
+## Enhanced Manual Testing Protocol
+
+### Contact Form Testing (Required for all PRs)
+- [ ] **Accessibility**: ARIA live regions present, tab navigation works, error states announced
+- [ ] **Validation**: Empty fields, invalid email, message length limits, real-time validation
+- [ ] **Visual feedback**: Submit button states (normal/disabled/loading), error styling
+- [ ] **Error recovery**: Form remains functional after validation errors
+- [ ] **Network resilience**: Graceful handling of connection failures
+- [ ] **Honeypot protection**: Hidden field with proper attributes
+- [ ] **Cross-page consistency**: Both index.html and elements.html forms work identically
+
+### E2E Test Coverage
+The Cypress test suite covers:
+- Form validation scenarios (empty fields, invalid email, message length)
+- Honeypot and timing protection
+- Accessibility features (ARIA attributes, live regions, keyboard navigation)
+- Network error simulation and graceful fallbacks
+- Button state management during submission
+- Form reset after successful submission
+- DRY_RUN mode testing
+- Multi-page form consistency
 
 ---
 

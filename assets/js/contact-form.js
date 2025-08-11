@@ -54,13 +54,19 @@
       liveRegion.className = 'form-status';
       liveRegion.setAttribute('aria-live', 'polite');
       liveRegion.setAttribute('aria-atomic', 'true');
-      liveRegion.style.cssText = 'margin-top: 1rem; padding: 0.75rem; border-radius: 4px; font-weight: bold;';
+      liveRegion.style.cssText = 'margin-top: 1rem; padding: 0.75rem; border-radius: 4px; font-weight: bold; display: none;';
       
-      // Insert after form fields but before submit button
+      // Try to insert after form fields but before submit button
       const submitContainer = form.querySelector('.actions, .col-12:last-child, ul:last-child');
-      if (submitContainer) {
-        form.insertBefore(liveRegion, submitContainer);
+      if (submitContainer && submitContainer.parentNode === form) {
+        try {
+          form.insertBefore(liveRegion, submitContainer);
+        } catch (e) {
+          // Fallback: append to end of form
+          form.appendChild(liveRegion);
+        }
       } else {
+        // Fallback: append to end of form
         form.appendChild(liveRegion);
       }
     }
