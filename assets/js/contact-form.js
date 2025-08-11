@@ -1,21 +1,28 @@
 /**
- * Unified Contact Form Handler for MB CONSULT
+ * Enhanced Contact Form Handler for MB CONSULT
  *
- * Finds every <form class="contact-form"> and wires submit behavior:
- *  - Client-side validation (required + email format)
- *  - Honeypot spam field (#company) silent success
- *  - Graceful UI disable/restore of submit button
- *  - Robust fetch with JSON fallback
+ * Provides robust, accessible form handling with:
+ *  - Complete client-side validation with accessible error messages
+ *  - ARIA live regions for screen reader feedback
+ *  - Honeypot anti-spam protection
+ *  - Rate limiting and timing validation
+ *  - Graceful error handling and recovery
+ *  - Secure submission to backend proxy only
  */
 
 (function () {
   'use strict';
 
-  // Azure Function endpoint
+  // Configuration
   const ENDPOINT = "https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler";
-
-  // Email validation regex
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const MIN_MESSAGE_LENGTH = 10;
+  const MAX_MESSAGE_LENGTH = 4000;
+  const MAX_NAME_LENGTH = 200;
+  const MIN_TIMING_MS = 300; // Prevent too-fast submissions
+
+  // Track form initialization time for timing validation
+  const formTimings = new WeakMap();
 
   function initializeContactForms() {
     const forms = document.querySelectorAll('form.contact-form');
@@ -23,106 +30,368 @@
   }
 
   function setupFormHandler(form) {
+    // Record initialization time for timing validation
+    formTimings.set(form, Date.now());
+
+    // Create ARIA live region for accessibility
+    const liveRegion = createLiveRegion(form);
+
+    // Set up real-time validation
+    setupFieldValidation(form, liveRegion);
+
+    // Handle form submission
     form.addEventListener('submit', async function (e) {
       e.preventDefault();
-
-      // Field resolution (support either id or name attributes)
-      const nameField = form.querySelector('#name, input[name="name"]');
-      const emailField = form.querySelector('#email, input[name="email"]');
-      const messageField = form.querySelector('#message, textarea[name="message"]');
-      const honeypotField = form.querySelector('#company, input[name="company"]');
-
-      if (!nameField || !emailField || !messageField) {
-        console.error('Contact form missing required fields');
-        return;
-      }
-
-      const name = (nameField.value || '').trim();
-      const email = (emailField.value || '').trim();
-      const message = (messageField.value || '').trim();
-      const honeypot = honeypotField ? (honeypotField.value || '').trim() : "";
-
-      // Required validation
-      if (!name || !email || !message) {
-        alert("Please fill in all required fields.");
-        return;
-      }
-
-      // Email validation
-      if (!EMAIL_REGEX.test(email)) {
-        alert("Please enter a valid email address.");
-        return;
-      }
-
-      // Honeypot – silent accept
-      if (honeypot !== "") {
-        alert("Message sent! Thank you for contacting MB CONSULT.");
-        form.reset();
-        return;
-      }
-
-      // Submit button handling
-      const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
-      let originalText = "";
-      if (submitButton) {
-        originalText = submitButton.textContent !== undefined ? submitButton.textContent : submitButton.value;
-        submitButton.disabled = true;
-        if (submitButton.textContent !== undefined) {
-          submitButton.textContent = "Sending...";
-        } else {
-          submitButton.value = "Sending...";
-        }
-      }
-
-      const payload = { name, email, message };
-
-      try {
-        const response = await fetch(ENDPOINT, {
-          method: "POST",
-            headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-          throw new Error("Server responded with status: " + response.status);
-        }
-
-        let result = null;
-        try {
-          result = await response.json();
-        } catch (_) {
-          // Non-JSON; proceed as success
-        }
-
-        if (result && result.success === false) {
-          throw new Error(result.errors ? result.errors.join("; ") : (result.message || "Unknown error"));
-        }
-
-        alert("Message sent! Thank you for contacting MB CONSULT.");
-        form.reset();
-
-      } catch (err) {
-        console.error("Form submission error:", err);
-        alert("Sorry, there was an error sending your message. Please try again later or contact us directly at support@mbconsult.io");
-      } finally {
-        if (submitButton) {
-          submitButton.disabled = false;
-          if (submitButton.textContent !== undefined) {
-            submitButton.textContent = originalText;
-          } else {
-            submitButton.value = originalText;
-          }
-        }
-      }
+      await handleFormSubmission(form, liveRegion);
     });
   }
 
+  function createLiveRegion(form) {
+    // Create or find existing live region
+    let liveRegion = form.querySelector('.form-status[aria-live]');
+    if (!liveRegion) {
+      liveRegion = document.createElement('div');
+      liveRegion.className = 'form-status';
+      liveRegion.setAttribute('aria-live', 'polite');
+      liveRegion.setAttribute('aria-atomic', 'true');
+      liveRegion.style.cssText = 'margin-top: 1rem; padding: 0.75rem; border-radius: 4px; font-weight: bold;';
+      
+      // Insert after form fields but before submit button
+      const submitContainer = form.querySelector('.actions, .col-12:last-child, ul:last-child');
+      if (submitContainer) {
+        form.insertBefore(liveRegion, submitContainer);
+      } else {
+        form.appendChild(liveRegion);
+      }
+    }
+    return liveRegion;
+  }
+
+  function setupFieldValidation(form, liveRegion) {
+    const nameField = form.querySelector('#name, input[name="name"]');
+    const emailField = form.querySelector('#email, input[name="email"]');
+    const messageField = form.querySelector('#message, textarea[name="message"]');
+
+    // Add aria-describedby for error announcements
+    [nameField, emailField, messageField].forEach(field => {
+      if (field) {
+        field.setAttribute('aria-describedby', liveRegion.id || 'form-status');
+      }
+    });
+
+    // Real-time validation on blur
+    if (nameField) {
+      nameField.addEventListener('blur', () => validateField(nameField, 'name', liveRegion));
+    }
+    if (emailField) {
+      emailField.addEventListener('blur', () => validateField(emailField, 'email', liveRegion));
+    }
+    if (messageField) {
+      messageField.addEventListener('blur', () => validateField(messageField, 'message', liveRegion));
+    }
+  }
+
+  function validateField(field, type, liveRegion, silent = false) {
+    const value = (field.value || '').trim();
+    let isValid = true;
+    let message = '';
+
+    // Clear previous error state
+    field.classList.remove('error');
+    field.removeAttribute('aria-invalid');
+
+    switch (type) {
+      case 'name':
+        if (!value) {
+          isValid = false;
+          message = 'Name is required.';
+        } else if (value.length > MAX_NAME_LENGTH) {
+          isValid = false;
+          message = `Name must be ${MAX_NAME_LENGTH} characters or less.`;
+        }
+        break;
+
+      case 'email':
+        if (!value) {
+          isValid = false;
+          message = 'Email address is required.';
+        } else if (!EMAIL_REGEX.test(value)) {
+          isValid = false;
+          message = 'Please enter a valid email address.';
+        }
+        break;
+
+      case 'message':
+        if (!value) {
+          isValid = false;
+          message = 'Message is required.';
+        } else if (value.length < MIN_MESSAGE_LENGTH) {
+          isValid = false;
+          message = `Message must be at least ${MIN_MESSAGE_LENGTH} characters.`;
+        } else if (value.length > MAX_MESSAGE_LENGTH) {
+          isValid = false;
+          message = `Message must be ${MAX_MESSAGE_LENGTH} characters or less.`;
+        }
+        break;
+    }
+
+    if (!isValid) {
+      field.classList.add('error');
+      field.setAttribute('aria-invalid', 'true');
+      if (!silent) {
+        showStatus(liveRegion, message, 'error');
+      }
+    }
+
+    return isValid;
+  }
+
+  function validateAllFields(form, liveRegion) {
+    const nameField = form.querySelector('#name, input[name="name"]');
+    const emailField = form.querySelector('#email, input[name="email"]');
+    const messageField = form.querySelector('#message, textarea[name="message"]');
+
+    if (!nameField || !emailField || !messageField) {
+      console.error('Contact form missing required fields');
+      showStatus(liveRegion, 'Form configuration error. Please contact support.', 'error');
+      return false;
+    }
+
+    const validations = [
+      validateField(nameField, 'name', liveRegion, true),
+      validateField(emailField, 'email', liveRegion, true),
+      validateField(messageField, 'message', liveRegion, true)
+    ];
+
+    const allValid = validations.every(v => v);
+    if (!allValid) {
+      showStatus(liveRegion, 'Please correct the errors above and try again.', 'error');
+      // Focus first invalid field
+      const firstInvalid = form.querySelector('[aria-invalid="true"]');
+      if (firstInvalid) {
+        firstInvalid.focus();
+      }
+    }
+
+    return allValid;
+  }
+
+  function checkTiming(form) {
+    const initTime = formTimings.get(form);
+    const elapsed = Date.now() - initTime;
+    return elapsed >= MIN_TIMING_MS;
+  }
+
+  async function handleFormSubmission(form, liveRegion) {
+    // Clear previous status
+    clearStatus(liveRegion);
+
+    // Validate all fields
+    if (!validateAllFields(form, liveRegion)) {
+      return;
+    }
+
+    // Check timing (anti-bot)
+    if (!checkTiming(form)) {
+      // Silent success for timing failures (don't reveal the check)
+      showStatus(liveRegion, 'Message sent! Thank you for contacting MB CONSULT.', 'success');
+      setTimeout(() => form.reset(), 1000);
+      return;
+    }
+
+    // Get field values
+    const nameField = form.querySelector('#name, input[name="name"]');
+    const emailField = form.querySelector('#email, input[name="email"]');
+    const messageField = form.querySelector('#message, textarea[name="message"]');
+    const honeypotField = form.querySelector('#company, input[name="company"]');
+
+    const name = (nameField.value || '').trim();
+    const email = (emailField.value || '').trim();
+    const message = (messageField.value || '').trim();
+    const honeypot = honeypotField ? (honeypotField.value || '').trim() : "";
+
+    // Honeypot check - silent success
+    if (honeypot !== "") {
+      showStatus(liveRegion, 'Message sent! Thank you for contacting MB CONSULT.', 'success');
+      setTimeout(() => form.reset(), 1000);
+      return;
+    }
+
+    // Disable submit button and show loading
+    const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+    const originalSubmitState = disableSubmitButton(submitButton);
+    
+    showStatus(liveRegion, 'Sending your message...', 'info');
+
+    try {
+      const payload = { name, email, message };
+
+      const response = await fetch(ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        // Handle specific HTTP errors
+        let errorMessage = 'Unable to send message. ';
+        switch (response.status) {
+          case 400:
+            errorMessage += 'Please check your information and try again.';
+            break;
+          case 429:
+            errorMessage += 'Please wait a moment before sending another message.';
+            break;
+          case 500:
+            errorMessage += 'Server error. Please try again later.';
+            break;
+          default:
+            errorMessage += `Server responded with error ${response.status}.`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      let result = null;
+      try {
+        result = await response.json();
+      } catch (_) {
+        // Non-JSON response; treat as success if 2xx
+        result = { success: true };
+      }
+
+      if (result && result.success === false) {
+        const errorMsg = result.errors 
+          ? result.errors.join('; ') 
+          : (result.error || 'Unknown error occurred');
+        throw new Error(errorMsg);
+      }
+
+      // Success!
+      showStatus(liveRegion, 'Message sent! Thank you for contacting MB CONSULT.', 'success');
+      form.reset();
+      
+      // Clear any error states
+      form.querySelectorAll('[aria-invalid="true"]').forEach(field => {
+        field.classList.remove('error');
+        field.removeAttribute('aria-invalid');
+      });
+
+    } catch (error) {
+      console.error("Form submission error:", error);
+      
+      let userMessage = error.message;
+      
+      // Provide fallback for network errors
+      if (userMessage.includes('fetch') || userMessage.includes('network') || userMessage.includes('NetworkError')) {
+        userMessage = 'Unable to connect to our servers. Please check your internet connection and try again.';
+      }
+      
+      // Fallback contact method
+      if (!userMessage.includes('@')) {
+        userMessage += ' You can also contact us directly at support@mbconsult.io';
+      }
+      
+      showStatus(liveRegion, userMessage, 'error');
+      
+    } finally {
+      // Restore submit button
+      restoreSubmitButton(submitButton, originalSubmitState);
+    }
+  }
+
+  function disableSubmitButton(button) {
+    if (!button) return null;
+
+    const originalState = {
+      disabled: button.disabled,
+      text: button.textContent !== undefined ? button.textContent : button.value
+    };
+
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    
+    if (button.textContent !== undefined) {
+      button.textContent = "Sending...";
+    } else {
+      button.value = "Sending...";
+    }
+
+    return originalState;
+  }
+
+  function restoreSubmitButton(button, originalState) {
+    if (!button || !originalState) return;
+
+    button.disabled = originalState.disabled;
+    button.removeAttribute('aria-busy');
+    
+    if (button.textContent !== undefined) {
+      button.textContent = originalState.text;
+    } else {
+      button.value = originalState.text;
+    }
+  }
+
+  function showStatus(liveRegion, message, type) {
+    liveRegion.textContent = message;
+    liveRegion.className = `form-status ${type}`;
+    
+    // Apply appropriate styling
+    switch (type) {
+      case 'success':
+        liveRegion.style.cssText += 'background: #d4edda; color: #155724; border: 1px solid #c3e6cb;';
+        break;
+      case 'error':
+        liveRegion.style.cssText += 'background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;';
+        break;
+      case 'info':
+        liveRegion.style.cssText += 'background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb;';
+        break;
+    }
+    
+    liveRegion.style.display = 'block';
+  }
+
+  function clearStatus(liveRegion) {
+    liveRegion.textContent = '';
+    liveRegion.className = 'form-status';
+    liveRegion.style.display = 'none';
+  }
+
+  // Add basic error styling to head if not present
+  function addErrorStyles() {
+    if (document.getElementById('contact-form-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'contact-form-styles';
+    style.textContent = `
+      .contact-form input.error,
+      .contact-form textarea.error {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+      }
+      .form-status {
+        margin-top: 1rem;
+        padding: 0.75rem;
+        border-radius: 4px;
+        font-weight: bold;
+        display: none;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Initialize when DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeContactForms);
+    document.addEventListener('DOMContentLoaded', () => {
+      addErrorStyles();
+      initializeContactForms();
+    });
   } else {
+    addErrorStyles();
     initializeContactForms();
   }
 })();

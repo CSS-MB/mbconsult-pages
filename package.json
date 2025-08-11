@@ -5,8 +5,20 @@
   "engines": {
     "node": ">=20 <21"
   },
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "cypress run",
+    "test:open": "cypress open",
+    "sass": "sass assets/sass/main.scss assets/css/main.css",
+    "sass:watch": "sass --watch assets/sass/main.scss:assets/css/main.css",
+    "validate": "htmlhint *.html",
+    "dev": "live-server --port=8080 --host=localhost --no-browser"
+  },
   "dependencies": {
     "nodemailer": "^6.9.15",
     "validator": "^13.11.0"
+  },
+  "devDependencies": {
+    "cypress": "^14.5.4"
   }
 }
