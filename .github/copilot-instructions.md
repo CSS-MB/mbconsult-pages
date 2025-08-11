@@ -1,189 +1,246 @@
-# MB CONSULT Business Website
-
-MB CONSULT is a static HTML5 business website for a consulting company, featuring modern CSS3 styling, responsive design, and interactive contact functionality. The site uses SASS for CSS preprocessing and includes an Azure Functions backend for contact form submissions.
-
-**Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.**
-
-## Working Effectively
-
-### Prerequisites and Environment Setup
-
-- Install Node.js (any recent version) for tooling: `node --version` to verify
-- Install SASS globally: `npm install -g sass` -- takes 15-30 seconds
-- Install live-server for development: `npm install -g live-server` -- takes 60-90 seconds
-- Install htmlhint for validation: `npm install -g htmlhint` -- takes 15-30 seconds
-
-### Development Server Options
-
-**Option 1: Python HTTP Server (Recommended for simple viewing)**
-
-```bash
-cd /path/to/repository
-python3 -m http.server 8000
-# Access at http://localhost:8000
-```
-
-**Option 2: Live-server (Recommended for development with auto-reload)**
-
-```bash
-cd /path/to/repository
-live-server --port=8080 --host=localhost --no-browser
-# Access at http://localhost:8080
-# Automatically reloads on file changes
-```
-
-### CSS Development with SASS
-
-- **NEVER CANCEL**: SASS compilation takes 1-2 seconds. Set timeout to 60+ seconds to be safe.
-- Source files in `assets/sass/` directory
-- Compiled output goes to `assets/css/main.css`
-- **To compile SASS:**
-
-```bash
-cd /path/to/repository
-sass assets/sass/main.scss assets/css/main.css
-# Expect deprecation warnings - these are normal and safe to ignore
-# Compilation completes in ~1 second
-```
-
-- **For development with auto-compilation:**
-
+Watch mode:
 ```bash
 sass --watch assets/sass/main.scss:assets/css/main.css
 ```
 
-### HTML Validation and Quality
-
+HTML validation:
 ```bash
-cd /path/to/repository
 htmlhint *.html
-# Should report "no errors found" for all HTML files
-# Validation completes in ~0.1 seconds
 ```
 
-## Repository Structure
+Never remove `assets/css/main.css` from version control; it is the deployable artifact.
 
-```
-/
-├── index.html              # Homepage
-├── generic.html            # About page
-├── elements.html           # Services & Features page
-├── assets/
-│   ├── css/               # Compiled CSS files
-│   │   ├── main.css       # Main stylesheet (compiled from SASS)
-│   │   ├── noscript.css   # No-JavaScript fallback styles
-│   │   └── fontawesome-all.min.css
-│   ├── sass/              # SASS source files
-│   │   ├── main.scss      # Main SASS entry point
-│   │   ├── libs/          # SASS libraries and mixins
-│   │   ├── base/          # Base styles
-│   │   ├── components/    # Component styles
-│   │   └── layout/        # Layout styles
-│   ├── js/                # JavaScript files
-│   │   ├── main.js        # Main site JavaScript
-│   │   └── jquery.*.js    # jQuery and plugins
-│   ├── webfonts/          # FontAwesome fonts
-│   └── images/            # Site images
-├── ContactFormHandler/     # Azure Functions backend
-│   ├── function.json      # Function configuration
-│   └── index.js           # Contact form handler
-├── .hintrc                # Browser compatibility configuration
-└── .github/
-    └── ISSUE_TEMPLATE/    # GitHub issue templates
-```
+---
 
-## Validation and Testing
+## 5. Contact Form Architecture
 
-### Manual Website Testing Workflow
+### Frontend
+- Forms located in `index.html` and `elements.html`.
+- A hidden honeypot field named `company` must remain blank for real users/bots detection.
+- Client script (if present or added) should:
+  - Validate required fields (name, email, message).
+  - Enforce minimum message length (align with backend `MIN_MESSAGE_LENGTH`).
+  - POST JSON (`application/json`) to the Azure Function endpoint.
+  - Provide user feedback (disable button during send, success alert, error alert).
+- Endpoint (current default):
+  - `https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler`
+- Success UX: Alert “Message sent! Thank you for contacting MB CONSULT.”
+- If honeypot triggers, backend returns success (to discourage bots enumerating detection logic).
 
-**ALWAYS complete this full workflow after making any changes:**
+### Backend (Azure Function)
+- File: `ContactFormHandler/index.js`
+- Stack: Node.js with `nodemailer` and `validator`.
+- Key behaviors:
+  - CORS allowlist support with fallback to default origins (`https://mbconsult.io`, `https://www.mbconsult.io`).
+  - Strict `application/json` Content-Type requirement (415 otherwise).
+  - JSON body size limit (32 KB default).
+  - Honeypot early success (no email sent).
+  - Input validation (name, email, message length).
+  - IP-based cooldown rate limiting (429 on excess).
+  - DRY_RUN mode for testing (simulated success).
+  - Sanitization & minimal HTML escaping for email body.
+  - Limited error hints (e.g., `smtp-auth`, `send-as`) without leaking raw stack traces.
 
-1. **Start development server** (choose one option above)
-2. **Open browser and navigate to site**
-3. **Test navigation**: Click all menu items (Home, About, Services & Features)
-4. **Test responsive design**: Resize browser window to test mobile/tablet views
-5. **Test contact form functionality**:
-   - Fill in Name field: "Test User"
-   - Fill in Email field: "test@example.com"
-   - Fill in Message field: "Test message content"
-   - Verify form accepts input and fields highlight properly
-   - Note: Form submission requires Azure backend - frontend validation only
+### Environment Variables (MUST be set via Azure App Settings; never hardcoded)
+| Variable | Purpose | Default / Requirement |
+|----------|---------|-----------------------|
+| `CORS_ORIGINS` | CSV of allowed origins | Defaults to preset origin list if unset |
+| `MAX_JSON_BYTES` | Request body max bytes | 32768 |
+| `MAX_MESSAGE_LENGTH` | Max message length | 4000 |
+| `MIN_MESSAGE_LENGTH` | Min message length | 10 |
+| `MAX_NAME_LENGTH` | Max name length | 200 |
+| `RATE_LIMIT_SECONDS` | Cooldown per IP | 60 |
+| `DRY_RUN` | Simulate success (no send) | false |
+| `OFFICE365_USER` / `OFFICE365_PASS` | Preferred SMTP creds | Required (or fallback to generic SMTP vars) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` | Alternate SMTP config | Optional (used if Office365 not set) |
+| `TO_EMAIL` | Recipient address | Required |
+| `FROM_EMAIL` | Envelope sender | Optional (falls back to OFFICE365_USER) |
+| `SUBJECT_PREFIX` | Email subject prefix | “[MB CONSULT Contact]” |
 
-### Content Validation
+### Change Protocol (MANDATORY)
+Before editing the Function:
+1. Objective: (what problem/feature).
+2. Proposed changes (code areas, new validations, env vars).
+3. Dependencies (justify any new package).
+4. Risks & mitigation.
+5. Rollback plan (how to revert cleanly).
+6. Provide this plan; await acknowledgment.
 
-- **Primary pages**: index.html (Homepage), generic.html (About), elements.html (Services)
-- **Key sections**: Welcome, Who We Are, What We Do, Get In Touch
-- **Contact info**: Idaho Falls, ID 83406, support@mbconsult.io, (208) 254-5305
-- **Expected errors**: Console may show "Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector" - this is normal and safe to ignore
+---
 
-### Performance and Compatibility
+## 6. Accepting or Rejecting New Dependencies
 
-- Site loads in under 2 seconds on local server
-- Compatible with modern browsers (see .hintrc for specific versions)
-- Mobile-responsive design works on all screen sizes
-- No automated testing infrastructure - manual testing required for all changes
-- No package.json - this is intentional (pure static site)
+Approve ONLY if ALL true:
+1. A clearly stated requirement cannot be met succinctly with native code.
+2. Security posture and license are acceptable (MIT/BSD/Apache; no copyleft surprises).
+3. Performance impact is minimal or net-positive.
+4. Maintenance burden is justified (update cadence / footprint).
+5. Usage is localized (ideally Azure Function only) and well documented.
 
-## Common Tasks
+If any fail → reject.
 
-### Making Style Changes
+---
 
-1. Edit SASS files in `assets/sass/` directory
-2. Compile with: `sass assets/sass/main.scss assets/css/main.css`
-3. Refresh browser to see changes (or use live-server for auto-reload)
-4. **Always test**: Run full manual testing workflow above
+## 7. Adding / Modifying Frontend Form Logic
 
-### Making Content Changes
+If the repo lacks a dedicated `contact-form.js` and richer UX is required:
+- Create `assets/js/contact-form.js`.
+- Attach via `<script src="assets/js/contact-form.js"></script>` near end of `<body>`.
+- Implement:
+  - DOM selection of forms with class `contact-form`.
+  - Basic validation and error messaging.
+  - `fetch` POST with JSON.
+  - Defensive try/catch showing user-friendly fallback error.
+  - No inline script expansions in HTML.
 
-1. Edit HTML files directly (index.html, generic.html, elements.html)
-2. Validate with: `htmlhint *.html`
-3. Test in browser with development server
-4. **Always test**: Run full manual testing workflow above
+Document addition here if material.
 
-### Adding New Images
+---
 
-1. Place images in `images/` directory
-2. Reference in HTML as: `src="images/filename.jpg"`
-3. Update alt tags for accessibility
-4. Test loading in browser
+## 8. Manual Testing Checklist (Run BEFORE each PR)
 
-### Contact Form Modifications
+1. Start local server (python or live-server).
+2. Load `index.html` and `elements.html`.
+3. Visual scan: layout, header, footer intact; no missing assets.
+4. Responsive: narrow (<=375px), tablet (~768px), desktop (>1024px).
+5. Accessibility spot check:
+   - Tab through interactive elements (focus visible, logical order).
+   - Images: alt attributes appropriate (decorative images can have empty alt).
+6. Forms:
+   - Submit empty -> client validation triggers.
+   - Valid sample: Name “Test User”, Email “test@example.com”, Message meeting min length (>=10 chars).
+   - Confirm submit button disable/enable cycle.
+   - Honeypot remains blank.
+7. Console: no uncaught errors or network CORS failures (expect none locally if endpoint reachable).
+8. SASS compile: successful; only benign warnings.
+9. HTML validation: `htmlhint *.html` -> 0 errors.
+10. Performance sanity: quick load; no enormous assets added.
+11. (If DRY_RUN active) Confirm JSON response includes `"dryRun": true` when curl testing backend.
 
-- **Frontend**: Form HTML is in index.html around line 207
-- **Backend**: Azure Function in ContactFormHandler/ directory
-- **Endpoint**: Currently configured for Power Automate webhook
-- **Testing**: Only frontend validation possible without Azure credentials
+---
 
-## Known Issues and Limitations
+## 9. Performance & Asset Guidelines
 
-- SASS compilation produces deprecation warnings - these are safe to ignore
-- Contact form requires Azure Functions backend for actual email sending
-- Console errors about blocked resources are normal and expected
-- No automated testing infrastructure exists
-- No package.json - this is intentional (pure static site)
+- Keep total added image weight per PR minimal; compress (JPEG/PNG/WebP).
+- Avoid inlining large Base64 images in HTML or CSS.
+- No third-party script unless absolutely necessary (plan-first).
+- Font usage restricted to already included FontAwesome & system fonts.
 
-## Timing Expectations
+---
 
-- **SASS compilation**: 1-2 seconds (NEVER CANCEL - set 60+ second timeout)
-- **HTML validation**: 0.1-0.2 seconds for all files
-- **Development server startup**: 2-3 seconds
-- **Live-server with tools install**: Initial npm installs take 60-90 seconds each
-- **Full manual testing workflow**: 2-3 minutes to complete thoroughly
+## 10. SEO & Metadata Essentials
 
-## Quick Reference Commands
+- Each HTML page: unique `<title>` + descriptive `<meta name="description">`.
+- Use semantic elements (`header`, `nav`, `section`, `footer`).
+- Avoid duplicate large text blocks across pages unless intentional.
+- Heading levels should not skip (h1 → h2 → h3).
+
+---
+
+## 11. Troubleshooting Matrix
+
+| Symptom | Probable Cause | Action |
+|---------|----------------|--------|
+| 415 Unsupported Media Type | Missing/incorrect `Content-Type` header | Ensure `application/json` |
+| 400 Invalid or missing JSON | Malformed JSON / size exceeded | Validate payload & size |
+| 400 validation errors | Empty name/email/message or short message | Adjust inputs; meet min length |
+| 429 Too many requests | Rate limit hit | Wait `RATE_LIMIT_SECONDS` |
+| 200 success but email not received | Honeypot triggered or DRY_RUN | Ensure honeypot empty; check DRY_RUN |
+| 500 Failed to send (hint smtp-auth) | Bad SMTP credentials | Verify `OFFICE365_USER/PASS` |
+| 500 Failed to send (hint send-as) | From address not authorized | Align `FROM_EMAIL` or grant send-as |
+| CORS blocked | Origin not in allowlist | Add to `CORS_ORIGINS` env var |
+| Hang / slow send | SMTP connectivity or network latency | Check Azure logs; verify SMTP port/security |
+
+---
+
+## 12. Decision Tree (Copilot Agent)
+
+Request Type → Action:
+
+| User Intent | Copilot Response |
+|-------------|------------------|
+| “Change styling / layout” | Edit SASS → compile → run checklist → propose PR. |
+| “Add a field to contact form” | Plan backend + env changes → await acknowledgment → implement front + back. |
+| “Switch to React / add bundler” | Out-of-Scope → produce scoped proposal, await approval. |
+| “Add analytics” | Provide privacy/performance plan (async, minimal) → await approval. |
+| “Optimize performance” | Audit images & request waterfall → propose targeted changes. |
+| “Why 415 error?” | Reference Troubleshooting Matrix → adjust headers/payload. |
+| “Add localization/i18n” | Out-of-Scope → propose rationale & minimal approach; await approval. |
+| “Implement CAPTCHA” | Plan-first (choose approach: honeypot reinforcement, reCAPTCHA, hCaptcha) with env var impact. |
+
+---
+
+## 13. Non-Negotiables
+
+- No secrets or credentials in repo.
+- No framework / bundler drift.
+- Always pass manual testing before PR.
+- Always plan-first for backend changes.
+- Keep documentation synchronized with reality.
+
+---
+
+## 14. Timing Expectations
+
+| Task | Typical Duration |
+|------|------------------|
+| SASS one-off compile | ~1–2 s |
+| HTML validation | ~0.1–0.2 s |
+| Dev server start | ~2–3 s |
+| First-time global tool install | 15–90 s each |
+| Full manual test cycle | ~2–3 min |
+
+Do NOT abort SASS compile early; allow warnings to resolve.
+
+---
+
+## 15. Future Extension Protocol
+
+If expansion (CI, analytics, additional Functions) is approved:
+1. Add subsection here: “Extension: <Name>”.
+2. Document purpose, new files, env vars, operational impact, rollback.
+3. Only then implement code.
+
+---
+
+## 16. Appendix A: Core Commands
 
 ```bash
-# Start development
+# Simple server
 python3 -m http.server 8000
+
+# Auto-reload server
+live-server --port=8080 --host=localhost --no-browser
 
 # Compile SASS
 sass assets/sass/main.scss assets/css/main.css
 
+# Watch SASS
+sass --watch assets/sass/main.scss:assets/css/main.css
+
 # Validate HTML
 htmlhint *.html
 
-# Install dev tools (one-time setup)
-npm install -g sass live-server htmlhint
+# Backend curl test
+curl -i \
+  -H "Origin: https://www.mbconsult.io" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test User","email":"test@example.com","message":"Hello from curl"}' \
+  https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler
 ```
 
-**Remember**: This is a static website - no complex build process, no package.json, no npm scripts. Focus on HTML/CSS/JS editing and manual browser testing.
+---
+
+## 17. Appendix B: Rationale for Minimalism
+
+Reducing moving parts:
+- Lowers attack surface (no dependency chain for bundlers/transpilers).
+- Simplifies audits & onboarding.
+- Ensures predictable deterministic deployments.
+- Minimizes maintenance churn and regressions.
+
+Complexity is accretive cost—only introduce layers when the business case outweighs that cost.
+
+---
+
+Last Updated: (Update this line whenever substantive changes are made)
