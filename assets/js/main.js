@@ -30,7 +30,8 @@
   // Forms.
 
   // Hack: Activate non-input submits.
-  $("form").on("click", ".submit", function (event) {
+  // Skip contact forms as they have their own custom submission handler
+  $("form:not(.contact-form)").on("click", ".submit", function (event) {
     // Stop propagation, default.
     event.stopPropagation();
     event.preventDefault();
