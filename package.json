@@ -1,23 +1,12 @@
 {
-  "name": "mbconsult-azure-functions",
+  "name": "mbconsult-functions",
   "version": "1.0.0",
-  "description": "Azure Functions for MB Consult contact form handler",
-  "main": "index.js",
+  "private": true,
   "engines": {
-    "node": ">=20"
+    "node": ">=20 <21"
   },
   "dependencies": {
-    "nodemailer": "^6.9.15"
-  },
-  "scripts": {
-    "start": "func start",
-    "test": "echo \"No tests specified\" && exit 0"
-  },
-  "keywords": [
-    "azure-functions",
-    "contact-form",
-    "nodemailer"
-  ],
-  "author": "MB Consult",
-  "license": "MIT"
+    "nodemailer": "^6.9.15",
+    "validator": "^13.11.0"
+  }
 }
