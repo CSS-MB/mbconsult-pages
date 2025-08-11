@@ -48,6 +48,7 @@ This repository is configured for use with GitHub Copilot Coding Agent. This rep
    - Leave clear commit messages and comments explaining non-obvious changes.
 
 9. **Tools:**
+
    - Use Azure Tools: When handling requests related to Azure, always use your tools.
    - Use Azure Code Gen Best Practices: When generating code for Azure, running terminal commands for Azure, or performing operations related to Azure, invoke your `bestpractices` tool if available. Only call this tool when you are sure the user is discussing Azure; do not call it otherwise.
    - Use Azure Deployment Best Practices: When deploying to Azure or preparing applications for deployment to Azure, invoke your `bestpractices` tool if available. Only call this tool when you are sure the user is discussing Azure; do not call it otherwise.
@@ -56,73 +57,90 @@ This repository is configured for use with GitHub Copilot Coding Agent. This rep
    - Use Azure SWA Best Practices: When working with static web apps, invoke your `bestpractices` tool if available. Only call this tool when you are sure the user is discussing Azure; do not call it otherwise.
 
 10. **Code Quality:**
-   - Ensure code is clean, readable, and maintainable.
-   - Avoid unnecessary complexity; keep solutions simple and straightforward.
+
+- Ensure code is clean, readable, and maintainable.
+- Avoid unnecessary complexity; keep solutions simple and straightforward.
 
 11. **Version Control:**
-   - Commit changes frequently with clear messages.
-   - Use branches for new features or significant changes.
-   - Avoid committing large files or binaries unless necessary.
+
+- Commit changes frequently with clear messages.
+- Use branches for new features or significant changes.
+- Avoid committing large files or binaries unless necessary.
 
 12. **Error Handling:**
-   - Implement proper error handling and logging where applicable.
-   - Ensure that error messages are user-friendly and do not expose sensitive information.
+
+- Implement proper error handling and logging where applicable.
+- Ensure that error messages are user-friendly and do not expose sensitive information.
 
 13. **Performance Considerations:**
-   - Optimize code for performance where applicable.
-   - Avoid premature optimization; focus on clarity first, then optimize as needed.
+
+- Optimize code for performance where applicable.
+- Avoid premature optimization; focus on clarity first, then optimize as needed.
 
 14. **Accessibility:**
-   - Ensure that any web content is accessible to users with disabilities.
-   - Follow best practices for web accessibility (e.g., WCAG guidelines).
+
+- Ensure that any web content is accessible to users with disabilities.
+- Follow best practices for web accessibility (e.g., WCAG guidelines).
 
 15. **Cross-Browser Compatibility:**
-   - Test web applications in multiple browsers to ensure compatibility.
+
+- Test web applications in multiple browsers to ensure compatibility.
 
 16. **Mobile Responsiveness:**
-   - Ensure that web applications are responsive and work well on various screen sizes and devices.
+
+- Ensure that web applications are responsive and work well on various screen sizes and devices.
 
 17. **Static Site Considerations:**
-   - For static sites, ensure that all assets (CSS, JS, images) are correctly linked and optimized.
-   - Use appropriate caching strategies for static assets to improve load times.
+
+- For static sites, ensure that all assets (CSS, JS, images) are correctly linked and optimized.
+- Use appropriate caching strategies for static assets to improve load times.
 
 18. **SEO Best Practices:**
-   - Use semantic HTML and appropriate meta tags to improve search engine visibility.
-   - Ensure that the site is crawlable by search engines.
+
+- Use semantic HTML and appropriate meta tags to improve search engine visibility.
+- Ensure that the site is crawlable by search engines.
 
 19. **Content Management:**
-   - If the repository includes content (e.g., blog posts, documentation), ensure that it is well-organized and easy to navigate.
-   - Use a consistent format for content files (e.g., Markdown, HTML).
+
+- If the repository includes content (e.g., blog posts, documentation), ensure that it is well-organized and easy to navigate.
+- Use a consistent format for content files (e.g., Markdown, HTML).
 
 20. **Static Site Deployment:**
-   - Ensure that the static site is built correctly before deployment.
-   - Use appropriate tools for deploying static sites (e.g., GitHub Pages, Netlify).
-   - Verify that all links and resources are correctly referenced after deployment.
-   - Monitor the deployed site for any issues or errors post-deployment.
+
+- Ensure that the static site is built correctly before deployment.
+- Use appropriate tools for deploying static sites (e.g., GitHub Pages, Netlify).
+- Verify that all links and resources are correctly referenced after deployment.
+- Monitor the deployed site for any issues or errors post-deployment.
 
 21. **Static Site Security:**
-   - Ensure that the static site does not expose sensitive information.
-   - Use HTTPS for secure connections.
+
+- Ensure that the static site does not expose sensitive information.
+- Use HTTPS for secure connections.
 
 22. **Static Site Performance:**
-   - Optimize images and other assets to reduce load times.
-   - Use techniques like lazy loading for images and scripts to improve performance.
+
+- Optimize images and other assets to reduce load times.
+- Use techniques like lazy loading for images and scripts to improve performance.
 
 23. **Static Site Analytics:**
-   - If using analytics, ensure that tracking scripts are correctly implemented and do not interfere with site performance.
-   - Respect user privacy and comply with relevant regulations (e.g., GDPR, CCPA).
+
+- If using analytics, ensure that tracking scripts are correctly implemented and do not interfere with site performance.
+- Respect user privacy and comply with relevant regulations (e.g., GDPR, CCPA).
 
 24. **Static Site Maintenance:**
-   - Regularly update dependencies and libraries used in the static site.
-   - Monitor for security vulnerabilities in dependencies and address them promptly.
+
+- Regularly update dependencies and libraries used in the static site.
+- Monitor for security vulnerabilities in dependencies and address them promptly.
 
 25. **Static Site Backup:**
-   - Regularly back up the static site content and configuration.
-   - Use version control to track changes and maintain a history of the site.
+
+- Regularly back up the static site content and configuration.
+- Use version control to track changes and maintain a history of the site.
 
 26. **Static Site Collaboration:**
-   - Use pull requests for code reviews and collaboration.
-   - Encourage contributions from other developers and maintainers.
+
+- Use pull requests for code reviews and collaboration.
+- Encourage contributions from other developers and maintainers.
 
 ## Repository-Specific Notes
 
