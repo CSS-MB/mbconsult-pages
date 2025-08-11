@@ -96,13 +96,11 @@ function getTransport() {
 
 module.exports = async function (context, req) {
   try {
-    // Preflight
     if ((req.method || "").toUpperCase() === "OPTIONS") {
       context.res = { status: 204, headers: corsHeaders(req), body: "" };
       return;
     }
 
-    // Content type
     const ct = (req.headers["content-type"] || "").toLowerCase();
     if (!ct.includes("application/json")) {
       context.res = jsonRes(
@@ -113,7 +111,6 @@ module.exports = async function (context, req) {
       return;
     }
 
-    // Rate limit
     const ip = getIp(req);
     if (isRateLimited(ip)) {
       context.res = jsonRes(
@@ -124,7 +121,6 @@ module.exports = async function (context, req) {
       return;
     }
 
-    // Parse + validate
     const payload = parseBody(req);
     if (!payload) {
       context.res = jsonRes(
@@ -136,7 +132,6 @@ module.exports = async function (context, req) {
     }
     const { name, email, message, company, errs } = validate(payload);
     if (company) {
-      // honeypot
       await sleep(700);
       context.res = jsonRes(200, { success: true, honeypot: true }, req);
       return;
