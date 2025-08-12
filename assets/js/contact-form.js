@@ -297,7 +297,7 @@
       
       // Fallback contact method
       if (!userMessage.includes('@')) {
-        userMessage += ' You can also contact us directly at support@mbconsult.io';
+        userMessage += ' You can also contact us directly at ' + SUPPORT_EMAIL;
       }
       
       showStatus(liveRegion, userMessage, 'error');
