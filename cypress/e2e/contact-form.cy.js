@@ -13,7 +13,6 @@ describe('Contact Form E2E Tests', () => {
     cy.get('form.contact-form').should('exist')
     
     // Wait for any CSS animations to complete
-    cy.wait(2000)
     
     // Now check visibility with proper retry
     cy.get('form.contact-form').should('be.visible')
