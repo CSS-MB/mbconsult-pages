@@ -145,7 +145,14 @@ describe('Contact Form E2E Tests', () => {
         cy.get('#message, textarea[name="message"]').type(validData.message)
         
         // Wait for timing protection to pass
-        cy.wait(500)
+      cy.clock()
+      cy.get('form.contact-form').first().within(() => {
+        cy.get('#name, input[name="name"]').type(validData.name)
+        cy.get('#email, input[name="email"]').type(validData.email)
+        cy.get('#message, textarea[name="message"]').type(validData.message)
+        
+        // Wait for timing protection to pass (simulate 500ms)
+        cy.tick(500)
         
         const submitButton = cy.get('button[type="submit"], input[type="submit"]')
         
