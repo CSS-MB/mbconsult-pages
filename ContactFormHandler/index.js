@@ -2,12 +2,16 @@
 const nodemailer = require("nodemailer");
 const validator = require("validator");
 
+// STRICT CORS enforcement - only production domains allowed
 const DEFAULT_ORIGINS = ["https://mbconsult.io", "https://www.mbconsult.io"];
 const ALLOWLIST = (process.env.CORS_ORIGINS || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 const ALLOWED_ORIGINS = ALLOWLIST.length ? ALLOWLIST : DEFAULT_ORIGINS;
+
+// Enhanced validation constants
+const MIN_TIMING_MS = 300; // Minimum time since form load to prevent bot submissions
 
 const MAX_JSON_BYTES = 1024 * 32;
 const MAX_MESSAGE_LENGTH = parseInt(
@@ -22,16 +26,28 @@ const DRY_RUN = String(process.env.DRY_RUN || "false").toLowerCase() === "true";
 const ipCooldown = new Map();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const corsHeaders = (req) => ({
-  "Access-Control-Allow-Origin":
-    req.headers.origin && ALLOWED_ORIGINS.includes(req.headers.origin)
-      ? req.headers.origin
-      : ALLOWED_ORIGINS[0],
-  Vary: "Origin",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Accept",
-  "Access-Control-Max-Age": "86400",
-});
+const corsHeaders = (req) => {
+  const origin = req.headers.origin;
+  
+  // STRICT CORS: Only allow explicitly configured origins
+  if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
+    return {
+      "Access-Control-Allow-Origin": "null", // Reject invalid origins
+      "Vary": "Origin",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Accept",
+      "Access-Control-Max-Age": "86400",
+    };
+  }
+  
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Vary": "Origin", 
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Accept",
+    "Access-Control-Max-Age": "86400",
+  };
+};
 const jsonRes = (status, body, req) => ({
   status,
   headers: { "Content-Type": "application/json", ...corsHeaders(req) },
@@ -69,11 +85,24 @@ function validate(payload) {
   const email = sanitize(payload.email, 320);
   const message = sanitize(payload.message, MAX_MESSAGE_LENGTH);
   const company = sanitize(payload.company, 256); // honeypot
+  const timing = parseInt(payload.timing || "0", 10); // client timing validation
+
+  // Enhanced validation
   if (!name) errs.push("name is required");
+  else if (name.length < 2) errs.push("name must be at least 2 characters");
+  
   if (!email || !validator.isEmail(email)) errs.push("valid email is required");
+  
   if (!message || message.length < MIN_MESSAGE_LENGTH)
     errs.push(`message must be at least ${MIN_MESSAGE_LENGTH} characters`);
-  return { name, email, message, company, errs };
+    
+  // Server-side timing validation (if client provides it)
+  if (timing > 0 && timing < MIN_TIMING_MS) {
+    // Don't add to errors (silent handling), but mark for special handling
+    return { name, email, message, company, errs, timingFail: true };
+  }
+  
+  return { name, email, message, company, errs, timingFail: false };
 }
 
 function getTransport() {
@@ -95,14 +124,29 @@ function getTransport() {
 }
 
 module.exports = async function (context, req) {
+  const startTime = Date.now();
+  
   try {
     if ((req.method || "").toUpperCase() === "OPTIONS") {
       context.res = { status: 204, headers: corsHeaders(req), body: "" };
       return;
     }
 
+    // CORS validation first
+    const origin = req.headers.origin;
+    if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
+      context.log.warn(`CORS violation from origin: ${origin || 'null'}`);
+      context.res = jsonRes(
+        403,
+        { success: false, error: "Access denied" },
+        req
+      );
+      return;
+    }
+
     const ct = (req.headers["content-type"] || "").toLowerCase();
     if (!ct.includes("application/json")) {
+      context.log.warn(`Invalid content-type: ${ct}`);
       context.res = jsonRes(
         415,
         { success: false, error: "Content-Type must be application/json" },
@@ -113,6 +157,7 @@ module.exports = async function (context, req) {
 
     const ip = getIp(req);
     if (isRateLimited(ip)) {
+      context.log.warn(`Rate limit exceeded for IP: ${ip}`);
       context.res = jsonRes(
         429,
         { success: false, error: "Too many requests" },
@@ -123,6 +168,7 @@ module.exports = async function (context, req) {
 
     const payload = parseBody(req);
     if (!payload) {
+      context.log.warn(`Invalid JSON body from IP: ${ip}`);
       context.res = jsonRes(
         400,
         { success: false, error: "Invalid or missing JSON body" },
@@ -130,13 +176,27 @@ module.exports = async function (context, req) {
       );
       return;
     }
-    const { name, email, message, company, errs } = validate(payload);
+    
+    const { name, email, message, company, errs, timingFail } = validate(payload);
+    
+    // Honeypot check - log but respond with success
     if (company) {
+      context.log.warn(`Honeypot triggered: IP=${ip}, company="${company}"`);
       await sleep(700);
       context.res = jsonRes(200, { success: true, honeypot: true }, req);
       return;
     }
+    
+    // Timing validation - log but respond with success  
+    if (timingFail) {
+      context.log.warn(`Timing validation failed: IP=${ip}, timing=${payload.timing}ms`);
+      await sleep(700);
+      context.res = jsonRes(200, { success: true, timing: true }, req);
+      return;
+    }
+    
     if (errs.length) {
+      context.log.warn(`Validation errors: IP=${ip}, errors=${errs.join(', ')}`);
       context.res = jsonRes(400, { success: false, errors: errs }, req);
       return;
     }
@@ -144,6 +204,7 @@ module.exports = async function (context, req) {
     const to = process.env.TO_EMAIL;
     const from = process.env.FROM_EMAIL || process.env.OFFICE365_USER;
     if (!to || !from) {
+      context.log.error(`Missing email configuration: TO_EMAIL=${!!to}, FROM_EMAIL=${!!from}`);
       context.res = jsonRes(
         500,
         {
@@ -156,6 +217,7 @@ module.exports = async function (context, req) {
     }
 
     if (DRY_RUN) {
+      context.log.info(`DRY_RUN: Contact form submission from ${name} <${email}> (IP: ${ip})`);
       context.res = jsonRes(200, { success: true, dryRun: true }, req);
       return;
     }
@@ -168,6 +230,7 @@ module.exports = async function (context, req) {
 Name: ${name}
 Email: ${email}
 IP: ${ip}
+Processing Time: ${Date.now() - startTime}ms
 
 Message:
 ${message}
@@ -185,6 +248,7 @@ ${message}
       <tr><td style="padding:2px 6px;color:#666">IP</td><td style="padding:2px 6px">${escapeHtml(
         ip
       )}</td></tr>
+      <tr><td style="padding:2px 6px;color:#666">Processing Time</td><td style="padding:2px 6px">${Date.now() - startTime}ms</td></tr>
     </table>
     <div style="white-space:pre-wrap;border:1px solid #eee;padding:8px;border-radius:6px;background:#fafafa">${escapeHtml(
       message
@@ -204,7 +268,10 @@ ${message}
 
     await getTransport().sendMail(mail);
     coolDown(ip);
+    
+    context.log.info(`Email sent successfully: ${name} <${email}> (IP: ${ip})`);
     context.res = jsonRes(200, { success: true }, req);
+    
   } catch (e) {
     const msg = String(e && (e.message || e));
     const low = msg.toLowerCase();
@@ -217,7 +284,14 @@ ${message}
       low.includes("from address")
     )
       hint = "send-as";
-    context.log.error("ContactFormHandler error:", msg);
+    
+    context.log.error("ContactFormHandler error:", {
+      message: msg,
+      ip: getIp(req),
+      origin: req.headers.origin,
+      userAgent: req.headers['user-agent']
+    });
+    
     context.res = jsonRes(
       500,
       { success: false, error: "Failed to send email.", hint },
