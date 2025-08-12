@@ -50,7 +50,7 @@ jobs:
 
       - name: "Run Azure Functions Action"
         uses: Azure/functions-action@v1
-        id: fa
+        id: functions
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
@@ -60,20 +60,13 @@ jobs:
         shell: bash
         run: |
           echo "Testing function endpoint accessibility..."
-          # Get the function URL from the action output or construct it
-          FUNCTION_URL="https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net/ContactFormHandler"
-
-          # Perform a basic POST request to test endpoint accessibility
-          # We expect either 200 (success), 400 (validation error), or 500 (SMTP not configured)
-          # All indicate the function is deployed and accessible
+          FUNCTION_URL="https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net/api/ContactFormHandler"
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -X POST \
             -H "Content-Type: application/json" \
             -d '{"name":"Test","email":"test@example.com","message":"Deployment test"}' \
             "$FUNCTION_URL" || echo "$CONNECTION_FAILURE_STATUS")
-
           echo "HTTP Status: $HTTP_STATUS"
-
           if [[ "$HTTP_STATUS" =~ ^(200|400|500)$ ]]; then
             echo "✅ Function endpoint is accessible (HTTP $HTTP_STATUS)"
             exit 0
