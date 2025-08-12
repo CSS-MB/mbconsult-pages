@@ -81,7 +81,7 @@
     // Add aria-describedby for error announcements
     [nameField, emailField, messageField].forEach(field => {
       if (field) {
-        field.setAttribute('aria-describedby', liveRegion.id || 'form-status');
+        field.setAttribute('aria-describedby', liveRegion.id);
       }
     });
 
