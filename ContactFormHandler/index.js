@@ -10,6 +10,14 @@ const ALLOWLIST = (process.env.CORS_ORIGINS || "")
   .filter(Boolean);
 const ALLOWED_ORIGINS = ALLOWLIST.length ? ALLOWLIST : DEFAULT_ORIGINS;
 
+// Log module load so platform indexing/state can be confirmed in live logs
+console.log(
+  "[ContactFormHandler] Module loaded",
+  new Date().toISOString(),
+  "Allowed origins:",
+  ALLOWED_ORIGINS.join(",") || "(none)"
+);
+
 // Enhanced validation constants
 const MIN_TIMING_MS = 300; // Minimum time since form load to prevent bot submissions
 
@@ -28,21 +36,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const corsHeaders = (req) => {
   const origin = req.headers.origin;
-  
+
   // STRICT CORS: Only allow explicitly configured origins
   if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
     return {
-      "Access-Control-Allow-Origin": "null", // Reject invalid origins
-      "Vary": "Origin",
+      "Access-Control-Allow-Origin": "null",
+      Vary: "Origin",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Accept",
       "Access-Control-Max-Age": "86400",
     };
   }
-  
+
   return {
     "Access-Control-Allow-Origin": origin,
-    "Vary": "Origin", 
+    Vary: "Origin",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Accept",
     "Access-Control-Max-Age": "86400",
@@ -71,8 +79,7 @@ const parseBody = (req) => {
   }
   return null;
 };
-const sanitize = (s, max) =>
-  typeof s === "string" ? s.trim().slice(0, max) : "";
+const sanitize = (s, max) => (typeof s === "string" ? s.trim().slice(0, max) : "");
 const escapeHtml = (s) =>
   String(s || "")
     .replace(/&/g, "&amp;")
@@ -87,21 +94,18 @@ function validate(payload) {
   const company = sanitize(payload.company, 256); // honeypot
   const timing = parseInt(payload.timing || "0", 10); // client timing validation
 
-  // Enhanced validation
   if (!name) errs.push("name is required");
   else if (name.length < 2) errs.push("name must be at least 2 characters");
-  
+
   if (!email || !validator.isEmail(email)) errs.push("valid email is required");
-  
+
   if (!message || message.length < MIN_MESSAGE_LENGTH)
     errs.push(`message must be at least ${MIN_MESSAGE_LENGTH} characters`);
-    
-  // Server-side timing validation (if client provides it)
+
   if (timing > 0 && timing < MIN_TIMING_MS) {
-    // Don't add to errors (silent handling), but mark for special handling
     return { name, email, message, company, errs, timingFail: true };
   }
-  
+
   return { name, email, message, company, errs, timingFail: false };
 }
 
@@ -135,7 +139,7 @@ module.exports = async function (context, req) {
     // CORS validation first
     const origin = req.headers.origin;
     if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
-      context.log.warn(`CORS violation from origin: ${origin || 'null'}`);
+      context.log.warn(`CORS violation from origin: ${origin || "null"}`);
       context.res = jsonRes(
         403,
         { success: false, error: "Access denied" },
@@ -196,7 +200,7 @@ module.exports = async function (context, req) {
     }
     
     if (errs.length) {
-      context.log.warn(`Validation errors: IP=${ip}, errors=${errs.join(', ')}`);
+      context.log.warn(`Validation errors: IP=${ip}, errors=${errs.join(", ")}`);
       context.res = jsonRes(400, { success: false, errors: errs }, req);
       return;
     }
@@ -225,35 +229,8 @@ module.exports = async function (context, req) {
     const subject = `${
       process.env.SUBJECT_PREFIX || "[MB CONSULT Contact]"
     } ${name} <${email}>`;
-    const text = `New contact form submission
-
-Name: ${name}
-Email: ${email}
-IP: ${ip}
-Processing Time: ${Date.now() - startTime}ms
-
-Message:
-${message}
-`;
-    const html = `
-  <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;line-height:1.4">
-    <h3 style="margin:0 0 8px">New contact form submission</h3>
-    <table style="border-collapse:collapse;margin-bottom:12px">
-      <tr><td style="padding:2px 6px;color:#666">Name</td><td style="padding:2px 6px">${escapeHtml(
-        name
-      )}</td></tr>
-      <tr><td style="padding:2px 6px;color:#666">Email</td><td style="padding:2px 6px">${escapeHtml(
-        email
-      )}</td></tr>
-      <tr><td style="padding:2px 6px;color:#666">IP</td><td style="padding:2px 6px">${escapeHtml(
-        ip
-      )}</td></tr>
-      <tr><td style="padding:2px 6px;color:#666">Processing Time</td><td style="padding:2px 6px">${Date.now() - startTime}ms</td></tr>
-    </table>
-    <div style="white-space:pre-wrap;border:1px solid #eee;padding:8px;border-radius:6px;background:#fafafa">${escapeHtml(
-      message
-    )}</div>
-  </div>`;
+    const text = `New contact form submission\n\nName: ${name}\nEmail: ${email}\nIP: ${ip}\nProcessing Time: ${Date.now() - startTime}ms\n\nMessage:\n${message}\n`;
+    const html = `\n  <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;line-height:1.4">\n    <h3 style="margin:0 0 8px">New contact form submission</h3>\n    <table style="border-collapse:collapse;margin-bottom:12px">\n      <tr><td style="padding:2px 6px;color:#666">Name</td><td style="padding:2px 6px">${escapeHtml(name)}</td></tr>\n      <tr><td style="padding:2px 6px;color:#666">Email</td><td style="padding:2px 6px">${escapeHtml(email)}</td></tr>\n      <tr><td style="padding:2px 6px;color:#666">IP</td><td style="padding:2px 6px">${escapeHtml(ip)}</td></tr>\n      <tr><td style="padding:2px 6px;color:#666">Processing Time</td><td style="padding:2px 6px">${Date.now() - startTime}ms</td></tr>\n    </table>\n    <div style="white-space:pre-wrap;border:1px solid #eee;padding:8px;border-radius:6px;background:#fafafa">${escapeHtml(message)}</div>\n  </div>`;
 
     const mail = {
       from,
@@ -289,7 +266,7 @@ ${message}
       message: msg,
       ip: getIp(req),
       origin: req.headers.origin,
-      userAgent: req.headers['user-agent']
+      userAgent: req.headers["user-agent"],
     });
     
     context.res = jsonRes(

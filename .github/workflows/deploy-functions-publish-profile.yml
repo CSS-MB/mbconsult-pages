@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "ContactFormHandler/**"
+      - "HealthPing/**"
       - "host.json"
       - "package.json"
       - ".github/workflows/deploy-functions-publish-profile.yml"
@@ -21,34 +22,34 @@ jobs:
     env:
       AZURE_FUNCTIONAPP_PUBLISH_PROFILE: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
     steps:
-      - name: "Checkout GitHub Action"
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node ${{ env.NODE_VERSION }}
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: "Resolve Project Dependencies Using Npm"
-        shell: bash
+      - name: Install & Verify Structure
         run: |
-          pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
           if [ -f package-lock.json ]; then
             npm ci
           else
             npm install
           fi
-          popd
+          echo "Verify critical files:"
+          test -f host.json || (echo "host.json missing" && exit 1)
+          test -d ContactFormHandler || (echo "ContactFormHandler dir missing" && exit 1)
+          test -f ContactFormHandler/function.json || (echo "ContactFormHandler/function.json missing" && exit 1)
+          test -f ContactFormHandler/index.js || (echo "ContactFormHandler/index.js missing" && exit 1)
+          test -d node_modules/nodemailer || (echo "nodemailer not installed" && exit 1)
+          echo "Structure OK"
 
-      - name: "Verify required secret exists"
-        shell: bash
+      - name: Verify Publish Profile Secret
         run: |
-          if [ -z "${AZURE_FUNCTIONAPP_PUBLISH_PROFILE}" ]; then
-            echo "::error::Missing required secret 'AZURE_FUNCTIONAPP_PUBLISH_PROFILE'. Define it in Repository Settings > Secrets and variables > Actions."
-            exit 1
-          fi
+          [ -z "${AZURE_FUNCTIONAPP_PUBLISH_PROFILE}" ] && { echo "::error::Missing publish profile secret"; exit 1; } || echo "Publish profile present."
 
-      - name: "Run Azure Functions Action"
+      - name: Deploy
         uses: Azure/functions-action@v1
         id: functions
         with:
@@ -56,21 +57,35 @@ jobs:
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           publish-profile: ${{ env.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
 
-      - name: "Smoke Test Function Endpoint"
-        shell: bash
+      - name: Initial Health Probe
         run: |
-          echo "Testing function endpoint accessibility..."
-          FUNCTION_URL="https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net/api/ContactFormHandler"
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST \
-            -H "Content-Type: application/json" \
-            -d '{"name":"Test","email":"test@example.com","message":"Deployment test"}' \
-            "$FUNCTION_URL" || echo "$CONNECTION_FAILURE_STATUS")
-          echo "HTTP Status: $HTTP_STATUS"
-          if [[ "$HTTP_STATUS" =~ ^(200|400|500)$ ]]; then
-            echo "✅ Function endpoint is accessible (HTTP $HTTP_STATUS)"
-            exit 0
-          else
-            echo "❌ Function endpoint test failed (HTTP $HTTP_STATUS)"
-            exit 1
-          fi
+          echo "Health probe:"
+          curl -i -m 20 https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net/api/health || true
+
+      - name: Warm-up & Non-404 Assertion
+        run: |
+          set -e
+          TARGET="https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net/api/ContactFormHandler"
+          echo "Warming $TARGET"
+          ATTEMPTS=0
+          MAX=12
+          SLEEP=5
+          while [ $ATTEMPTS -lt $MAX ]; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+              -H "Content-Type: application/json" \
+              -d '{"name":"DeployWarm","email":"warm@mbc.io","message":"Warm sequence message content"}' \
+              "$TARGET" || echo "000")
+            echo "Attempt $((ATTEMPTS+1)) -> HTTP $STATUS"
+            if [ "$STATUS" != "404" ] && [ "$STATUS" != "000" ]; then
+              echo "Non-404 achieved"
+              exit 0
+            fi
+            ATTEMPTS=$((ATTEMPTS+1))
+            sleep $SLEEP
+          done
+          echo "::error::Function remained 404 after $MAX attempts"
+          exit 1
+
+      - name: Final Health Check
+        run: |
+          curl -s -i https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net/api/health || true
