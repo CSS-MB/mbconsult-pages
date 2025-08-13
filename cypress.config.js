@@ -14,7 +14,8 @@ module.exports = defineConfig({
     responseTimeout: 10000,
     env: {
       // Zapier webhook endpoint for testing
-      ENDPOINT: 'https://hooks.zapier.com/hooks/catch/14923374/u6gyprq/'
+      // Test webhook endpoint (do not use production endpoints)
+      ENDPOINT: process.env.TEST_WEBHOOK_URL || 'http://localhost:9999/test-webhook'
     }
   }
 })
