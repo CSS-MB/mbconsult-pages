@@ -14,16 +14,43 @@
   'use strict';
 
   // Configuration
-  const ENDPOINT = "https://hooks.zapier.com/hooks/catch/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_KEY"; // TODO: Replace with actual Zapier webhook URL
+  const ENDPOINT = "https://hooks.zapier.com/hooks/catch/20735709/2l09zfb"; // Production Zapier webhook URL
+  const SHARED_TOKEN = "MBConsult2024!ContactFormSecret"; // Security header token
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const MIN_MESSAGE_LENGTH = 10;
   const MAX_MESSAGE_LENGTH = 4000;
   const MAX_NAME_LENGTH = 200;
   const MIN_TIMING_MS = 300; // Prevent too-fast submissions
+  const REQUEST_TIMEOUT_MS = 10000; // 10 second timeout
+  const MAX_RETRIES = 2; // Retry failed requests
   const SUPPORT_EMAIL = "support@mbconsult.io"
 
   // Track form initialization time for timing validation
   const formTimings = new WeakMap();
+
+  // Fetch with timeout and retry logic
+  async function fetchWithRetry(url, options, retries = 0) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      // If this was an abort due to timeout or network error, retry
+      if (retries > 0 && (error.name === 'AbortError' || error.message.includes('fetch'))) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+        return fetchWithRetry(url, options, retries - 1);
+      }
+      throw error;
+    }
+  }
 
   function initializeContactForms() {
     const forms = document.querySelectorAll('form.contact-form');
@@ -210,7 +237,7 @@
     const nameField = form.querySelector('#name, input[name="name"]');
     const emailField = form.querySelector('#email, input[name="email"]');
     const messageField = form.querySelector('#message, textarea[name="message"]');
-    const honeypotField = form.querySelector('#company, input[name="company"]');
+    const honeypotField = form.querySelector('input[name="company"]');
 
     const name = (nameField.value || '').trim();
     const email = (emailField.value || '').trim();
@@ -231,17 +258,27 @@
     showStatus(liveRegion, 'Sending your message...', 'info');
 
     try {
-      // Include honeypot field in payload for Zapier to process
-      const payload = { name, email, message, company: honeypot };
+      // Include honeypot field and metadata in payload for Zapier to process
+      const payload = { 
+        name, 
+        email, 
+        message, 
+        company: honeypot,
+        submittedAt: new Date().toISOString(),
+        referrer: document.referrer || 'direct',
+        page: window.location.pathname,
+        userAgent: navigator.userAgent
+      };
 
-      const response = await fetch(ENDPOINT, {
+      const response = await fetchWithRetry(ENDPOINT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json"
+          "Accept": "application/json",
+          "X-Shared-Token": SHARED_TOKEN
         },
         body: JSON.stringify(payload)
-      });
+      }, MAX_RETRIES);
 
       if (!response.ok) {
         // Handle specific HTTP errors

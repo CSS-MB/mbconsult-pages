@@ -1,7 +1,5 @@
 # Contact Form Documentation
 
-# Contact Form Documentation
-
 ## Current Architecture
 
 The MB CONSULT website contact forms submit directly to a Zapier webhook that processes form submissions and handles email delivery. Client-side validation, security measures, and accessibility features ensure robust form handling.
@@ -13,8 +11,8 @@ The MB CONSULT website contact forms submit directly to a Zapier webhook that pr
 ### Technical Implementation
 - **Frontend Handler**: `assets/js/contact-form.js` - Enhanced accessible form handler with ARIA live regions
 - **Backend Service**: Zapier webhook - Serverless form processing and email delivery
-- **Method**: POST with JSON payload: `{ name, email, message, company }`
-- **Endpoint**: `https://hooks.zapier.com/hooks/catch/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_KEY` (configured in contact-form.js)
+- **Method**: POST with JSON payload and security headers
+- **Endpoint**: `https://hooks.zapier.com/hooks/catch/20735709/2l09zfb` (configured in contact-form.js)
 
 ## Enhanced Security Features
 
@@ -34,7 +32,16 @@ The MB CONSULT website contact forms submit directly to a Zapier webhook that pr
    - Name length limits (2-200 characters)
    - HTML sanitization for display
 
-4. **Enhanced Client-Side Filtering**: All validation performed in browser before submission
+4. **Security Headers**: 
+   - `X-Shared-Token: MBConsult2024!ContactFormSecret` included in all requests
+   - Provides additional verification layer for Zapier webhook
+
+5. **Enhanced Client-Side Filtering**: All validation performed in browser before submission
+
+### Network Resilience
+- **Request Timeout**: 10 second timeout prevents hanging requests
+- **Retry Logic**: Automatic retry (up to 2 attempts) for network failures
+- **Graceful Degradation**: Fallback contact information on persistent errors
 
 ### Accessibility Features
 - **ARIA Live Regions**: Screen reader announcements for form status updates
@@ -65,7 +72,11 @@ The MB CONSULT website contact forms submit directly to a Zapier webhook that pr
   "name": "Contact Name",
   "email": "contact@example.com", 
   "message": "Message content",
-  "company": ""
+  "company": "",
+  "submittedAt": "2024-01-15T10:30:00.000Z",
+  "referrer": "https://www.google.com",
+  "page": "/index.html",
+  "userAgent": "Mozilla/5.0..."
 }
 ```
 
@@ -74,12 +85,54 @@ The MB CONSULT website contact forms submit directly to a Zapier webhook that pr
 - **email**: Contact's email address (validated format)
 - **message**: Message content (10-4000 characters) 
 - **company**: Honeypot field (should be empty for legitimate submissions)
+- **submittedAt**: ISO timestamp of submission
+- **referrer**: Source URL that led to the form
+- **page**: Current page path where form was submitted
+- **userAgent**: Browser user agent string for analytics
+
+### Security Headers
+All requests include the following security header:
+- **X-Shared-Token**: `MBConsult2024!ContactFormSecret`
+
+Configure your Zapier webhook to verify this token for additional security.
 
 ### Spam Filtering in Zapier
 Configure Zapier filter step to check:
 - `company` field is empty (honeypot protection)
+- `X-Shared-Token` header matches expected value
 - `name`, `email`, `message` fields are present and non-empty
 - Optional: Additional spam keyword filtering
+
+### Zapier Troubleshooting
+
+#### Common Zapier Integration Issues
+
+| Issue | Symptoms | Solution |
+|-------|----------|----------|
+| Webhook not receiving data | No entries in Zapier history | Verify webhook URL in contact-form.js |
+| Security token mismatch | Webhook receives but doesn't process | Check X-Shared-Token header configuration |
+| Honeypot false positives | Legitimate forms blocked | Review Zapier filter conditions |
+| Metadata missing | Basic payload received only | Verify latest contact-form.js deployment |
+| Email delivery fails | Webhook succeeds but no email | Check Zapier email action configuration |
+
+#### Zapier Webhook Testing
+```bash
+# Test complete payload with security header
+curl -i \
+  -H "Content-Type: application/json" \
+  -H "X-Shared-Token: MBConsult2024!ContactFormSecret" \
+  -d '{
+    "name":"Test User",
+    "email":"test@example.com",
+    "message":"Test message from integration testing",
+    "company":"",
+    "submittedAt":"2024-01-15T10:30:00.000Z",
+    "referrer":"direct",
+    "page":"/index.html",
+    "userAgent":"curl/test"
+  }' \
+  https://hooks.zapier.com/hooks/catch/20735709/2l09zfb
+```
 
 ## Operations Guide
 
@@ -95,10 +148,13 @@ Configure Zapier filter step to check:
 | Issue | Symptoms | Solution |
 |-------|----------|----------|
 | Network Error | "Unable to send message" | Check webhook URL and internet connection |
+| Request Timeout | Form hangs on "Sending..." | Network/server issues - automatic retry engaged |
 | 404 Not Found | Submission fails silently | Verify Zapier webhook URL is correct |
+| 403 Forbidden | Security token rejected | Check X-Shared-Token header configuration |
 | CORS Issues | Browser blocks request | Zapier webhooks typically allow all origins |
 | Validation Errors | Client-side error messages | Check field requirements (length, format) |
 | Spam Filter | Form shows success but no email | Check Zapier filter conditions |
+| Retry Exhaustion | Multiple timeout errors | Check network stability and Zapier status |
 
 #### Debug Steps
 1. Open browser developer tools
@@ -120,6 +176,9 @@ Configure Zapier filter step to check:
 - [ ] Success/error messages are accessible
 - [ ] Form resets after successful submission
 - [ ] Network error handling provides fallback contact
+- [ ] Security header included in requests
+- [ ] Metadata fields populated correctly
+- [ ] Timeout and retry logic functional
 
 #### Automated Testing
 ```bash
@@ -209,19 +268,37 @@ npm run dev
 
 Before updating the webhook URL in `assets/js/contact-form.js`:
 1. **Test new webhook**: Verify Zapier webhook receives and processes test submissions
-2. **Document the change**: Record old and new webhook URLs
-3. **Plan rollback**: Keep previous webhook URL available for quick revert
-4. **Monitor submissions**: Watch Zapier history after deployment
+2. **Configure security**: Ensure X-Shared-Token header validation is enabled
+3. **Document the change**: Record old and new webhook URLs
+4. **Plan rollback**: Keep previous webhook URL available for quick revert
+5. **Monitor submissions**: Watch Zapier history after deployment
 
-## Integration Testing
+#### Zapier Configuration Updates
+When modifying Zapier filters or actions:
+1. **Test in Zapier**: Use the "Test" feature for each step
+2. **Validate filters**: Ensure honeypot and security token checks work
+3. **Monitor email delivery**: Confirm email actions function correctly
+4. **Document changes**: Record filter conditions and action configurations
+
+### Integration Testing
 
 ### Testing Against Live Webhook
 ```bash
-# Test webhook with valid submission
+# Test webhook with complete payload and security header
 curl -i \
   -H "Content-Type: application/json" \
-  -d '{"name":"Test User","email":"test@example.com","message":"Test message from integration testing","company":""}' \
-  https://hooks.zapier.com/hooks/catch/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_KEY
+  -H "X-Shared-Token: MBConsult2024!ContactFormSecret" \
+  -d '{
+    "name":"Test User",
+    "email":"test@example.com",
+    "message":"Test message from integration testing",
+    "company":"",
+    "submittedAt":"2024-01-15T10:30:00.000Z",
+    "referrer":"direct",
+    "page":"/index.html",
+    "userAgent":"curl/test"
+  }' \
+  https://hooks.zapier.com/hooks/catch/20735709/2l09zfb
 ```
 
 Expected successful response:
@@ -236,8 +313,32 @@ Expected successful response:
 # Test with honeypot field filled (should be filtered by Zapier)
 curl -i \
   -H "Content-Type: application/json" \
-  -d '{"name":"Bot User","email":"bot@example.com","message":"Spam message","company":"spam company"}' \
-  https://hooks.zapier.com/hooks/catch/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_KEY
+  -H "X-Shared-Token: MBConsult2024!ContactFormSecret" \
+  -d '{
+    "name":"Bot User",
+    "email":"bot@example.com",
+    "message":"Spam message",
+    "company":"spam company",
+    "submittedAt":"2024-01-15T10:30:00.000Z",
+    "referrer":"direct",
+    "page":"/index.html",
+    "userAgent":"curl/test"
+  }' \
+  https://hooks.zapier.com/hooks/catch/20735709/2l09zfb
+```
+
+### Testing Security Header
+```bash
+# Test without security header (should be rejected)
+curl -i \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Test User",
+    "email":"test@example.com",
+    "message":"Test without security header",
+    "company":""
+  }' \
+  https://hooks.zapier.com/hooks/catch/20735709/2l09zfb
 ```
 
 ### Load Testing Considerations

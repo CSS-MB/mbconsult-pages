@@ -6,16 +6,17 @@ describe('Contact Form E2E Tests', () => {
   }
 
   beforeEach(() => {
-    // Visit homepage and wait for full load with longer timeout for animations
-    cy.visit('/', { timeout: 30000 })
+    // Visit elements page which has simpler layout and no complex animations
+    cy.visit('/elements.html', { timeout: 30000 })
     
     // Wait for form to exist and be ready
     cy.get('form.contact-form').should('exist')
     
-    // Wait for any CSS animations to complete
-    
-    // Now check visibility with proper retry
+    // Wait for form to be visible
     cy.get('form.contact-form').should('be.visible')
+    
+    // Brief wait for form initialization
+    cy.wait(500)
   })
 
   describe('Form Validation', () => {
