@@ -38,7 +38,8 @@
   const MIN_TIMING_MS = 300; // Prevent too-fast submissions
   const REQUEST_TIMEOUT_MS = 10000; // 10 second timeout
   const MAX_RETRIES = 2; // Retry failed requests
-  const SUPPORT_EMAIL = "support@mbconsult.io"
+  const SUPPORT_EMAIL = "support@mbconsult.io";
+  const SUPPORT_PHONE = "(208) 254-5305";
 
   // Track form initialization time for timing validation
   const formTimings = new WeakMap();
