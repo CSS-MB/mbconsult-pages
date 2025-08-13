@@ -229,7 +229,16 @@ module.exports = async function (context, req) {
     const subject = `${
       process.env.SUBJECT_PREFIX || "[MB CONSULT Contact]"
     } ${name} <${email}>`;
-    const text = `New contact form submission\n\nName: ${name}\nEmail: ${email}\nIP: ${ip}\nProcessing Time: ${Date.now() - startTime}ms\n\nMessage:\n${message}\n`;
+    const text = `New contact form submission
+
+Name: ${name}
+Email: ${email}
+IP: ${ip}
+Processing Time: ${Date.now() - startTime}ms
+
+Message:
+${message}
+`;
     const html = `
       <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;line-height:1.4">
         <h3 style="margin:0 0 8px">New contact form submission</h3>
