@@ -230,7 +230,32 @@ module.exports = async function (context, req) {
       process.env.SUBJECT_PREFIX || "[MB CONSULT Contact]"
     } ${name} <${email}>`;
     const text = `New contact form submission\n\nName: ${name}\nEmail: ${email}\nIP: ${ip}\nProcessing Time: ${Date.now() - startTime}ms\n\nMessage:\n${message}\n`;
-    const html = `\n  <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;line-height:1.4">\n    <h3 style="margin:0 0 8px">New contact form submission</h3>\n    <table style="border-collapse:collapse;margin-bottom:12px">\n      <tr><td style="padding:2px 6px;color:#666">Name</td><td style="padding:2px 6px">${escapeHtml(name)}</td></tr>\n      <tr><td style="padding:2px 6px;color:#666">Email</td><td style="padding:2px 6px">${escapeHtml(email)}</td></tr>\n      <tr><td style="padding:2px 6px;color:#666">IP</td><td style="padding:2px 6px">${escapeHtml(ip)}</td></tr>\n      <tr><td style="padding:2px 6px;color:#666">Processing Time</td><td style="padding:2px 6px">${Date.now() - startTime}ms</td></tr>\n    </table>\n    <div style="white-space:pre-wrap;border:1px solid #eee;padding:8px;border-radius:6px;background:#fafafa">${escapeHtml(message)}</div>\n  </div>`;
+    const html = `
+      <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:14px;line-height:1.4">
+        <h3 style="margin:0 0 8px">New contact form submission</h3>
+        <table style="border-collapse:collapse;margin-bottom:12px">
+          <tr>
+            <td style="padding:2px 6px;color:#666">Name</td>
+            <td style="padding:2px 6px">${escapeHtml(name)}</td>
+          </tr>
+          <tr>
+            <td style="padding:2px 6px;color:#666">Email</td>
+            <td style="padding:2px 6px">${escapeHtml(email)}</td>
+          </tr>
+          <tr>
+            <td style="padding:2px 6px;color:#666">IP</td>
+            <td style="padding:2px 6px">${escapeHtml(ip)}</td>
+          </tr>
+          <tr>
+            <td style="padding:2px 6px;color:#666">Processing Time</td>
+            <td style="padding:2px 6px">${Date.now() - startTime}ms</td>
+          </tr>
+        </table>
+        <div style="white-space:pre-wrap;border:1px solid #eee;padding:8px;border-radius:6px;background:#fafafa">
+          ${escapeHtml(message)}
+        </div>
+      </div>
+    `;
 
     const mail = {
       from,
