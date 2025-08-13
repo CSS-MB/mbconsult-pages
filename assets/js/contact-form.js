@@ -16,7 +16,6 @@
   // Configuration
   // Load ENDPOINT from global variable, fallback to null
   let ENDPOINT = window.CONTACT_FORM_ENDPOINT || null;
-  const SHARED_TOKEN = "MBConsult2024!ContactFormSecret"; // Security header token
   // Security header token will be loaded from meta tag
   let SHARED_TOKEN = null;
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -236,7 +235,7 @@
     // Clear previous status
     clearStatus(liveRegion);
 
-    // Validate all fields
+    // Validate all fields first
     if (!validateAllFields(form, liveRegion)) {
       return;
     }
@@ -274,6 +273,11 @@
     showStatus(liveRegion, 'Sending your message...', 'info');
 
     try {
+      // Check if endpoint is configured
+      if (!ENDPOINT) {
+        throw new Error('Contact form is not properly configured. Please contact us directly at ' + SUPPORT_EMAIL + ' or call ' + SUPPORT_PHONE + '.');
+      }
+
       // Include honeypot field and metadata in payload for Zapier to process
       const payload = { 
         name, 
