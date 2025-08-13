@@ -131,7 +131,7 @@ curl -i \
     "page":"/index.html",
     "userAgent":"curl/test"
   }' \
-  https://hooks.zapier.com/hooks/catch/14923374/u6gyprq/
+  <YOUR_ZAPIER_WEBHOOK_URL>
 ```
 
 ## Operations Guide
