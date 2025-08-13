@@ -14,7 +14,7 @@
   'use strict';
 
   // Configuration
-  const ENDPOINT = "https://hooks.zapier.com/hooks/catch/14923374/u6gyprq/"; // Production Zapier webhook URL
+  let ENDPOINT = null; // Will be loaded from config file
   const SHARED_TOKEN = "MBConsult2024!ContactFormSecret"; // Security header token
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const MIN_MESSAGE_LENGTH = 10;
