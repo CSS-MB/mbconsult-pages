@@ -14,7 +14,8 @@
   'use strict';
 
   // Configuration
-  let ENDPOINT = null; // Will be loaded from config file
+  // Load ENDPOINT from global variable, fallback to null
+  let ENDPOINT = window.CONTACT_FORM_ENDPOINT || null;
   const SHARED_TOKEN = "MBConsult2024!ContactFormSecret"; // Security header token
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const MIN_MESSAGE_LENGTH = 10;
