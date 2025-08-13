@@ -2,30 +2,33 @@
 const nodemailer = require("nodemailer");
 const validator = require("validator");
 
-// STRICT CORS enforcement - only production domains allowed
-const DEFAULT_ORIGINS = ["https://mbconsult.io", "https://www.mbconsult.io"];
+// LOG origins for audit only
+const DEFAULT_ORIGINS = [
+  "https://mbconsult.io",
+  "https://www.mbconsult.io",
+  "http://mbconsult.io",
+  "http://www.mbconsult.io",
+  "https://portal.azure.com/",
+  "http://portal.azure.com/",
+  "http://127.0.0.1:*/",
+  "https://127.0.0.1:*/"
+];
 const ALLOWLIST = (process.env.CORS_ORIGINS || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 const ALLOWED_ORIGINS = ALLOWLIST.length ? ALLOWLIST : DEFAULT_ORIGINS;
 
-// Log module load so platform indexing/state can be confirmed in live logs
 console.log(
   "[ContactFormHandler] Module loaded",
   new Date().toISOString(),
-  "Allowed origins:",
+  "Allowed origins (for logging only):",
   ALLOWED_ORIGINS.join(",") || "(none)"
 );
 
-// Enhanced validation constants
-const MIN_TIMING_MS = 300; // Minimum time since form load to prevent bot submissions
-
+const MIN_TIMING_MS = 300;
 const MAX_JSON_BYTES = 1024 * 32;
-const MAX_MESSAGE_LENGTH = parseInt(
-  process.env.MAX_MESSAGE_LENGTH || "4000",
-  10
-);
+const MAX_MESSAGE_LENGTH = parseInt(process.env.MAX_MESSAGE_LENGTH || "4000", 10);
 const MIN_MESSAGE_LENGTH = parseInt(process.env.MIN_MESSAGE_LENGTH || "10", 10);
 const MAX_NAME_LENGTH = parseInt(process.env.MAX_NAME_LENGTH || "200", 10);
 const RATE_LIMIT_SECONDS = parseInt(process.env.RATE_LIMIT_SECONDS || "60", 10);
@@ -35,19 +38,8 @@ const ipCooldown = new Map();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const corsHeaders = (req) => {
-  const origin = req.headers.origin;
-
-  // STRICT CORS: Only allow explicitly configured origins
-  if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
-    return {
-      "Access-Control-Allow-Origin": "null",
-      Vary: "Origin",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Accept",
-      "Access-Control-Max-Age": "86400",
-    };
-  }
-
+  // Only needed for manual OPTIONS handling, Azure will inject proper CORS if configured
+  const origin = req.headers.origin || "null";
   return {
     "Access-Control-Allow-Origin": origin,
     Vary: "Origin",
@@ -56,6 +48,7 @@ const corsHeaders = (req) => {
     "Access-Control-Max-Age": "86400",
   };
 };
+
 const jsonRes = (status, body, req) => ({
   status,
   headers: { "Content-Type": "application/json", ...corsHeaders(req) },
@@ -91,8 +84,8 @@ function validate(payload) {
   const name = sanitize(payload.name, MAX_NAME_LENGTH);
   const email = sanitize(payload.email, 320);
   const message = sanitize(payload.message, MAX_MESSAGE_LENGTH);
-  const company = sanitize(payload.company, 256); // honeypot
-  const timing = parseInt(payload.timing || "0", 10); // client timing validation
+  const company = sanitize(payload.company, 256);
+  const timing = parseInt(payload.timing || "0", 10);
 
   if (!name) errs.push("name is required");
   else if (name.length < 2) errs.push("name must be at least 2 characters");
@@ -129,24 +122,18 @@ function getTransport() {
 
 module.exports = async function (context, req) {
   const startTime = Date.now();
-  
   try {
     if ((req.method || "").toUpperCase() === "OPTIONS") {
+      // Respond to preflight; Azure handles CORS, this just echoes
       context.res = { status: 204, headers: corsHeaders(req), body: "" };
       return;
     }
 
-    // CORS validation first
-    const origin = req.headers.origin;
-    if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
-      context.log.warn(`CORS violation from origin: ${origin || "null"}`);
-      context.res = jsonRes(
-        403,
-        { success: false, error: "Access denied" },
-        req
-      );
-      return;
-    }
+    // Log the origin for diagnostics, do NOT block
+    const origin = req.headers.origin || "null";
+    context.log.info(`ContactFormHandler: request from origin: ${origin}`);
+
+    // NO IN-CODE CORS GATE!! Azure handles CORS enforcement
 
     const ct = (req.headers["content-type"] || "").toLowerCase();
     if (!ct.includes("application/json")) {
