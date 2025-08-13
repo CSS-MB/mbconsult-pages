@@ -275,7 +275,7 @@
     try {
       // Check if endpoint is configured
       if (!ENDPOINT) {
-        throw new Error('Contact form is not properly configured. Please contact us directly at ' + SUPPORT_EMAIL + ' or call (208) 254-5305.');
+        throw new Error('Contact form is not properly configured. Please contact us directly at ' + SUPPORT_EMAIL + ' or call ' + SUPPORT_PHONE + '.');
       }
 
       // Include honeypot field and metadata in payload for Zapier to process
