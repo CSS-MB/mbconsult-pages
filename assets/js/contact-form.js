@@ -20,7 +20,7 @@
   const MAX_MESSAGE_LENGTH = 4000;
   const MAX_NAME_LENGTH = 200;
   const MIN_TIMING_MS = 300; // Prevent too-fast submissions
-  const SUPPORT_EMAIL = "mathew@mbconsult.io"
+  const SUPPORT_EMAIL = "support@mbconsult.io"
 
   // Track form initialization time for timing validation
   const formTimings = new WeakMap();
