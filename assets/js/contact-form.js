@@ -17,7 +17,23 @@
   // Load ENDPOINT from global variable, fallback to null
   let ENDPOINT = window.CONTACT_FORM_ENDPOINT || null;
   const SHARED_TOKEN = "MBConsult2024!ContactFormSecret"; // Security header token
+  // Security header token will be loaded from meta tag
+  let SHARED_TOKEN = null;
+  let SHARED_TOKEN = null;
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // Load security token from meta tag
+  function loadSharedToken() {
+    const meta = document.querySelector('meta[name="contact-form-token"]');
+    if (meta && meta.content) {
+      SHARED_TOKEN = meta.content;
+    } else {
+      SHARED_TOKEN = null;
+      console.warn("Contact form security token meta tag not found.");
+    }
+  }
+  // Load token on script initialization
+  loadSharedToken();
   const MIN_MESSAGE_LENGTH = 10;
   const MAX_MESSAGE_LENGTH = 4000;
   const MAX_NAME_LENGTH = 200;
