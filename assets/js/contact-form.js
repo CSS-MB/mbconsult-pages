@@ -19,7 +19,6 @@
   const SHARED_TOKEN = "MBConsult2024!ContactFormSecret"; // Security header token
   // Security header token will be loaded from meta tag
   let SHARED_TOKEN = null;
-  let SHARED_TOKEN = null;
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   // Load security token from meta tag
