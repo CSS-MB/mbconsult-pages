@@ -14,7 +14,7 @@ module.exports = defineConfig({
     responseTimeout: 10000,
     env: {
       // Zapier webhook endpoint for testing
-      ENDPOINT: 'https://hooks.zapier.com/hooks/catch/20735709/2l09zfb'
+      ENDPOINT: 'https://hooks.zapier.com/hooks/catch/14923374/u6gyprq/'
     }
   }
 })

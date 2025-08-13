@@ -12,7 +12,7 @@ The MB CONSULT website contact forms submit directly to a Zapier webhook that pr
 - **Frontend Handler**: `assets/js/contact-form.js` - Enhanced accessible form handler with ARIA live regions
 - **Backend Service**: Zapier webhook - Serverless form processing and email delivery
 - **Method**: POST with JSON payload and security headers
-- **Endpoint**: `https://hooks.zapier.com/hooks/catch/20735709/2l09zfb` (configured in contact-form.js)
+- **Endpoint**: `https://hooks.zapier.com/hooks/catch/14923374/u6gyprq/` (configured in contact-form.js)
 
 ## Enhanced Security Features
 
