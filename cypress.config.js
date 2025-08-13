@@ -13,8 +13,8 @@ module.exports = defineConfig({
     requestTimeout: 10000,
     responseTimeout: 10000,
     env: {
-      // Azure Function endpoint for testing
-      ENDPOINT: 'https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler'
+      // Zapier webhook endpoint for testing (placeholder)
+      ENDPOINT: 'https://hooks.zapier.com/hooks/catch/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_KEY'
     }
   }
 })

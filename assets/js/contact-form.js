@@ -7,14 +7,14 @@
  *  - Honeypot anti-spam protection
  *  - Rate limiting and timing validation
  *  - Graceful error handling and recovery
- *  - Secure submission to backend proxy only
+ *  - Secure submission to Zapier webhook
  */
 
 (function () {
   'use strict';
 
   // Configuration
-  const ENDPOINT = "https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler";
+  const ENDPOINT = "https://hooks.zapier.com/hooks/catch/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_KEY"; // TODO: Replace with actual Zapier webhook URL
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const MIN_MESSAGE_LENGTH = 10;
   const MAX_MESSAGE_LENGTH = 4000;
@@ -231,7 +231,8 @@
     showStatus(liveRegion, 'Sending your message...', 'info');
 
     try {
-      const payload = { name, email, message };
+      // Include honeypot field in payload for Zapier to process
+      const payload = { name, email, message, company: honeypot };
 
       const response = await fetch(ENDPOINT, {
         method: "POST",

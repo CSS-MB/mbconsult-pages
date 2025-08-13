@@ -1,8 +1,10 @@
 # Contact Form Documentation
 
+# Contact Form Documentation
+
 ## Current Architecture
 
-The MB CONSULT website contact forms submit directly to a secure Azure Function backend proxy that enforces strict validation, CORS policies, and anti-spam measures before forwarding to email services.
+The MB CONSULT website contact forms submit directly to a Zapier webhook that processes form submissions and handles email delivery. Client-side validation, security measures, and accessibility features ensure robust form handling.
 
 ### Form Locations
 - **Homepage** (`index.html`): "Get in Touch" section
@@ -10,35 +12,29 @@ The MB CONSULT website contact forms submit directly to a secure Azure Function 
 
 ### Technical Implementation
 - **Frontend Handler**: `assets/js/contact-form.js` - Enhanced accessible form handler with ARIA live regions
-- **Backend Proxy**: `ContactFormHandler/index.js` - Hardened Azure Function with strict CORS and validation
-- **Method**: POST with JSON payload: `{ name, email, message }`
-- **Endpoint**: `https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler`
+- **Backend Service**: Zapier webhook - Serverless form processing and email delivery
+- **Method**: POST with JSON payload: `{ name, email, message, company }`
+- **Endpoint**: `https://hooks.zapier.com/hooks/catch/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_KEY` (configured in contact-form.js)
 
 ## Enhanced Security Features
 
 ### Multi-Layer Anti-Spam Protection
 1. **Honeypot Field**: Hidden "company" input field automatically added to forms
-   - If filled by bots, submission is silently treated as success without sending email
+   - If filled by bots, submission is silently treated as success without processing
    - Field is completely hidden via CSS and positioned off-screen with `aria-hidden="true"`
+   - Included in payload for Zapier to filter spam submissions
    
 2. **Timing Validation**: Submissions under 300ms after page load are rejected
    - Client-side tracking prevents obvious scripted attacks
-   - Server-side validation as additional protection
    - Rejected submissions show success message to avoid revealing the check
 
-3. **Strict CORS Enforcement**: Backend only accepts requests from production domains
-   - `https://mbconsult.io` and `https://www.mbconsult.io` by default
-   - Configurable via `CORS_ORIGINS` environment variable
-   - Invalid origins receive 403 Forbidden
-
-4. **Rate Limiting**: IP-based cooldown period (60 seconds default)
-5. **Input Validation**: 
-   - Email format validation (client and server)
+3. **Input Validation**: 
+   - Email format validation (client-side)
    - Message length limits (10-4000 characters)
    - Name length limits (2-200 characters)
-   - Input sanitization and HTML escaping
+   - HTML sanitization for display
 
-6. **Enhanced Logging**: All validation failures, spam attempts, and errors are logged for audit
+4. **Enhanced Client-Side Filtering**: All validation performed in browser before submission
 
 ### Accessibility Features
 - **ARIA Live Regions**: Screen reader announcements for form status updates
@@ -56,51 +52,60 @@ The MB CONSULT website contact forms submit directly to a secure Azure Function 
 - Graceful error handling with fallback contact information
 - Defensive network error handling
 
-## Environment Variables (Azure App Settings)
+## Zapier Webhook Configuration
 
-| Variable | Purpose | Default / Requirement |
-|----------|---------|----------------------|
-| `CORS_ORIGINS` | CSV of allowed origins | `https://mbconsult.io,https://www.mbconsult.io` |
-| `MAX_JSON_BYTES` | Request body max bytes | 32768 |
-| `MAX_MESSAGE_LENGTH` | Max message length | 4000 |
-| `MIN_MESSAGE_LENGTH` | Min message length | 10 |
-| `MAX_NAME_LENGTH` | Max name length | 200 |
-| `RATE_LIMIT_SECONDS` | Cooldown per IP | 60 |
-| `DRY_RUN` | Simulate success (no email send) | false |
-| `OFFICE365_USER` / `OFFICE365_PASS` | SMTP credentials | Required |
-| `TO_EMAIL` | Recipient address | Required |
-| `FROM_EMAIL` | Envelope sender | Optional (falls back to OFFICE365_USER) |
-| `SUBJECT_PREFIX` | Email subject prefix | "[MB CONSULT Contact]" |
+### Webhook Setup
+1. **Create Zapier Webhook Trigger**: Set up a "Catch Hook" trigger in Zapier
+2. **Configure Email Action**: Connect to email service (Gmail, Outlook, etc.)
+3. **Update Endpoint**: Replace placeholder URL in `assets/js/contact-form.js`
+
+### Expected Payload Format
+```json
+{
+  "name": "Contact Name",
+  "email": "contact@example.com", 
+  "message": "Message content",
+  "company": ""
+}
+```
+
+### Field Mapping
+- **name**: Contact's name (2-200 characters)
+- **email**: Contact's email address (validated format)
+- **message**: Message content (10-4000 characters) 
+- **company**: Honeypot field (should be empty for legitimate submissions)
+
+### Spam Filtering in Zapier
+Configure Zapier filter step to check:
+- `company` field is empty (honeypot protection)
+- `name`, `email`, `message` fields are present and non-empty
+- Optional: Additional spam keyword filtering
 
 ## Operations Guide
 
 ### Monitoring and Troubleshooting
 
-#### Server-Side Monitoring
-- Azure Function logs include detailed information for all events:
-  - Successful submissions with processing time
-  - Validation failures with specific errors
-  - CORS violations with origin information
-  - Honeypot triggers and timing violations
-  - Rate limiting events
-  - SMTP errors with categorized hints
+#### Client-Side Monitoring
+- Browser developer tools show all form submission attempts
+- Console logs indicate validation failures and network errors
+- Network tab shows webhook requests and responses
 
 #### Common Issues & Solutions
 
 | Issue | Symptoms | Solution |
 |-------|----------|----------|
-| CORS Blocked | Network error in browser console | Add domain to `CORS_ORIGINS` env var |
-| 415 Error | "Content-Type must be application/json" | Check client headers |
-| 400 Validation | "name is required" etc. | Check field requirements |
-| 429 Rate Limited | "Too many requests" | Wait 60 seconds or adjust `RATE_LIMIT_SECONDS` |
-| 500 SMTP Auth | "Failed to send (smtp-auth)" | Verify `OFFICE365_USER/PASS` credentials |
-| 500 Send-As | "Failed to send (send-as)" | Check `FROM_EMAIL` permissions |
+| Network Error | "Unable to send message" | Check webhook URL and internet connection |
+| 404 Not Found | Submission fails silently | Verify Zapier webhook URL is correct |
+| CORS Issues | Browser blocks request | Zapier webhooks typically allow all origins |
+| Validation Errors | Client-side error messages | Check field requirements (length, format) |
+| Spam Filter | Form shows success but no email | Check Zapier filter conditions |
 
 #### Debug Steps
 1. Open browser developer tools
-2. Submit form and check Network tab
-3. Check server logs in Azure portal
-4. Verify environment variables are set correctly
+2. Submit form and check Network tab  
+3. Verify webhook URL in contact-form.js
+4. Check Zapier webhook history for requests
+5. Review Zapier filter and action steps
 
 ### Testing
 
@@ -145,43 +150,37 @@ npm run sass
 ### Security Considerations
 
 #### Current Security Posture
-✅ **Strong**: CORS enforcement, input validation, rate limiting, honeypot, timing checks
-✅ **Logging**: Comprehensive audit trail of all security events
-✅ **Defense in Depth**: Multiple layers of protection
-⚠️ **Monitoring**: Manual log review required (consider automated alerting)
+✅ **Strong**: Client-side validation, honeypot protection, timing checks
+✅ **Simplified**: No backend credentials or server management required
+✅ **Accessible**: Enhanced accessibility features with proper ARIA support
+⚠️ **Monitoring**: Manual review of Zapier webhook history required
 
 #### Recommended Monitoring
-1. **Set up Azure Function alerts** for:
-   - High error rates (>5% in 5 minutes)
+1. **Monitor Zapier webhook history** for:
+   - Unusual submission patterns
    - Excessive honeypot triggers (>10 in 1 hour)
-   - CORS violations (>5 in 5 minutes)
-   - Rate limiting events (>20 in 5 minutes)
+   - Network errors or failures
+   - Large volumes of submissions
 
 2. **Regular Security Reviews**:
-   - Weekly log review for unusual patterns
-   - Monthly review of environment variables
-   - Quarterly update of allowed origins list
+   - Weekly review of Zapier webhook history
+   - Monthly review of spam filter effectiveness
+   - Quarterly update of client-side validation rules
 
 #### Future Enhancements
 - **Advanced Bot Protection**: Consider Cloudflare Turnstile or similar
-- **Geographic Restrictions**: Block submissions from unexpected countries
-- **Content Filtering**: Advanced spam detection in message content
+- **Content Filtering**: Advanced spam detection in Zapier filters
 - **Backup Notification**: Secondary email or SMS for critical failures
+- **Rate Limiting**: Consider Cloudflare rate limiting for additional protection
 
-### Rotating Credentials
+### Webhook Security
 
-#### SMTP Credentials
-1. Generate new Office365 app password
-2. Update `OFFICE365_PASS` in Azure App Settings
-3. Test with DRY_RUN=true first
-4. Deploy and verify functionality
-5. Revoke old credentials
-
-#### Endpoint Security
-The Azure Function URL includes authentication keys and should be treated as sensitive:
-- **Never commit** the full endpoint URL to version control
-- **Rotate Function keys** quarterly via Azure portal
-- **Monitor access logs** for unexpected usage patterns
+#### Webhook URL Protection
+The Zapier webhook URL should be treated as sensitive:
+- **Never commit** the full webhook URL to public version control
+- **Rotate webhook URLs** if compromised
+- **Monitor Zapier logs** for unexpected usage patterns
+- **Use HTTPS only** (Zapier enforces this by default)
 
 ## Development
 
@@ -205,41 +204,47 @@ npm run dev
 3. Validate HTML with `npm run validate`
 4. Manual testing per checklist above
 
-#### Backend Changes
-**⚠️ IMPORTANT**: Backend changes require careful planning due to production impact.
+#### Webhook Configuration Changes
+**⚠️ IMPORTANT**: Webhook URL changes affect production immediately.
 
-Before modifying `ContactFormHandler/index.js`:
-1. **Document the change**: Objective, scope, risks, rollback plan
-2. **Test in DRY_RUN mode**: Set `DRY_RUN=true` in Azure settings
-3. **Incremental deployment**: Deploy to staging first if available
-4. **Monitor logs**: Watch for errors after deployment
-5. **Rollback plan**: Keep previous version ready to redeploy
+Before updating the webhook URL in `assets/js/contact-form.js`:
+1. **Test new webhook**: Verify Zapier webhook receives and processes test submissions
+2. **Document the change**: Record old and new webhook URLs
+3. **Plan rollback**: Keep previous webhook URL available for quick revert
+4. **Monitor submissions**: Watch Zapier history after deployment
 
 ## Integration Testing
 
-### Testing Against Live Backend
+### Testing Against Live Webhook
 ```bash
-# Set DRY_RUN mode for safe testing
+# Test webhook with valid submission
 curl -i \
-  -H "Origin: https://www.mbconsult.io" \
   -H "Content-Type: application/json" \
-  -d '{"name":"Test User","email":"test@example.com","message":"Test message from integration testing"}' \
-  https://mbconsult-function-app.azurewebsites.net/api/ContactFormHandler
+  -d '{"name":"Test User","email":"test@example.com","message":"Test message from integration testing","company":""}' \
+  https://hooks.zapier.com/hooks/catch/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_KEY
 ```
 
-Expected DRY_RUN response:
+Expected successful response:
 ```json
 {
-  "success": true,
-  "dryRun": true
+  "status": "success"
 }
 ```
 
+### Testing Honeypot Protection
+```bash
+# Test with honeypot field filled (should be filtered by Zapier)
+curl -i \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Bot User","email":"bot@example.com","message":"Spam message","company":"spam company"}' \
+  https://hooks.zapier.com/hooks/catch/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_KEY
+```
+
 ### Load Testing Considerations
-- Rate limiting is set to 60-second cooldowns per IP
-- For load testing, coordinate with operations to temporarily adjust limits
-- Use multiple source IPs to avoid triggering rate limits
+- Zapier has built-in rate limiting and fair usage policies
+- For load testing, coordinate with Zapier support if needed
 - Test honeypot and timing protections separately
+- Monitor Zapier task usage during testing
 
 ---
 
@@ -247,7 +252,7 @@ Expected DRY_RUN response:
 
 For technical issues with the contact form:
 - **Development**: Update GitHub issues in CSS-MB/mbconsult-pages
-- **Operations**: Azure Function logs and environment variables
+- **Operations**: Zapier webhook history and logs
 - **Emergency**: Direct email to support@mbconsult.io
 
 ---
