@@ -1,5 +1,5 @@
 {
-  "name": "mbconsult-functions",
+  "name": "mbconsult-pages",
   "version": "1.0.0",
   "private": true,
   "engines": {
@@ -13,10 +13,6 @@
     "sass:watch": "sass --watch assets/sass/main.scss:assets/css/main.css",
     "validate": "htmlhint *.html",
     "dev": "live-server --port=8080 --host=localhost --no-browser"
-  },
-  "dependencies": {
-    "nodemailer": "^6.9.15",
-    "validator": "^13.11.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.54.2",

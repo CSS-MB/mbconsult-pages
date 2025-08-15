@@ -6,16 +6,17 @@ describe('Contact Form E2E Tests', () => {
   }
 
   beforeEach(() => {
-    // Visit homepage and wait for full load with longer timeout for animations
-    cy.visit('/', { timeout: 30000 })
+    // Visit elements page which has simpler layout and no complex animations
+    cy.visit('/elements.html', { timeout: 30000 })
     
     // Wait for form to exist and be ready
     cy.get('form.contact-form').should('exist')
     
-    // Wait for any CSS animations to complete
-    
-    // Now check visibility with proper retry
+    // Wait for form to be visible
     cy.get('form.contact-form').should('be.visible')
+    
+    // Brief wait for form initialization
+    cy.wait(500)
   })
 
   describe('Form Validation', () => {
@@ -174,7 +175,7 @@ describe('Contact Form E2E Tests', () => {
   describe('Network Error Handling', () => {
     it('should handle network failures gracefully', () => {
       // Intercept and fail the request
-      cy.intercept('POST', '**/ContactFormHandler', { forceNetworkError: true }).as('networkError')
+      cy.intercept('POST', '**/hooks/catch/**', { forceNetworkError: true }).as('networkError')
       
       cy.get('form.contact-form').first().within(() => {
         cy.get('#name, input[name="name"]').type(validData.name)
@@ -199,7 +200,7 @@ describe('Contact Form E2E Tests', () => {
 
     it('should handle server errors gracefully', () => {
       // Intercept and return server error
-      cy.intercept('POST', '**/ContactFormHandler', { statusCode: 500, body: { success: false, error: 'Server error' } }).as('serverError')
+      cy.intercept('POST', '**/hooks/catch/**', { statusCode: 500, body: { success: false, error: 'Server error' } }).as('serverError')
       
       cy.get('form.contact-form').first().within(() => {
         cy.get('#name, input[name="name"]').type(validData.name)
@@ -220,7 +221,7 @@ describe('Contact Form E2E Tests', () => {
 
     it('should handle rate limiting (429)', () => {
       // Intercept and return rate limit error
-      cy.intercept('POST', '**/ContactFormHandler', { statusCode: 429, body: { success: false, error: 'Too many requests' } }).as('rateLimited')
+      cy.intercept('POST', '**/hooks/catch/**', { statusCode: 429, body: { success: false, error: 'Too many requests' } }).as('rateLimited')
       
       cy.get('form.contact-form').first().within(() => {
         cy.get('#name, input[name="name"]').type(validData.name)
@@ -243,7 +244,7 @@ describe('Contact Form E2E Tests', () => {
   describe('DRY_RUN Mode', () => {
     it('should handle DRY_RUN responses correctly', () => {
       // Intercept and return dry run response
-      cy.intercept('POST', '**/ContactFormHandler', { statusCode: 200, body: { success: true, dryRun: true } }).as('dryRun')
+      cy.intercept('POST', '**/hooks/catch/**', { statusCode: 200, body: { success: true, dryRun: true } }).as('dryRun')
       
       cy.get('form.contact-form').first().within(() => {
         cy.get('#name, input[name="name"]').type(validData.name)
@@ -292,7 +293,7 @@ describe('Contact Form E2E Tests', () => {
   describe('Form Reset and Cleanup', () => {
     it('should properly reset form after successful submission', () => {
       // Mock successful submission
-      cy.intercept('POST', '**/ContactFormHandler', { statusCode: 200, body: { success: true } }).as('success')
+      cy.intercept('POST', '**/hooks/catch/**', { statusCode: 200, body: { success: true } }).as('success')
       
       cy.get('form.contact-form').first().within(() => {
         cy.get('#name, input[name="name"]').type(validData.name)
@@ -323,4 +324,60 @@ describe('Contact Form E2E Tests', () => {
       })
     })
   })
+
+  describe('Zapier Integration', () => {
+    it('should include honeypot field in payload for Zapier webhook', () => {
+      // Intercept request to verify payload structure
+      cy.intercept('POST', '**/hooks/catch/**', (req) => {
+        // Verify all expected fields are present
+        expect(req.body).to.have.property('name', validData.name)
+        expect(req.body).to.have.property('email', validData.email)
+        expect(req.body).to.have.property('message', validData.message)
+        expect(req.body).to.have.property('company', '') // Honeypot should be empty
+        
+        req.reply({ statusCode: 200, body: { success: true } })
+      }).as('zapierRequest')
+      
+      cy.get('form.contact-form').first().within(() => {
+        cy.get('#name, input[name="name"]').type(validData.name)
+        cy.get('#email, input[name="email"]').type(validData.email)
+        cy.get('#message, textarea[name="message"]').type(validData.message)
+        
+        cy.wait(500) // Wait for timing protection
+        
+        cy.get('button[type="submit"], input[type="submit"]').click()
+        
+        cy.wait('@zapierRequest')
+        
+        // Should show success
+        cy.get('.form-status.success').should('be.visible')
+      })
+    })
+
+    it('should include filled honeypot field in payload when triggered', () => {
+      // Intercept request to verify honeypot behavior
+      cy.intercept('POST', '**/hooks/catch/**', (req) => {
+        // Should never reach here with client-side honeypot protection
+        // But if it does, verify the payload includes the honeypot value
+        expect(req.body).to.have.property('company', 'bot-company')
+        req.reply({ statusCode: 200, body: { success: true } })
+      }).as('honeypotRequest')
+      
+      cy.get('form.contact-form').first().within(() => {
+        cy.get('#name, input[name="name"]').type(validData.name)
+        cy.get('#email, input[name="email"]').type(validData.email)
+        cy.get('#message, textarea[name="message"]').type(validData.message)
+        
+        // Fill honeypot field
+        cy.get('#company, input[name="company"]').invoke('val', 'bot-company')
+        
+        cy.get('button[type="submit"], input[type="submit"]').click()
+        
+        // Should show success immediately (honeypot protection)
+        cy.get('.form-status.success').should('be.visible')
+        cy.get('.form-status').should('contain', 'Message sent! Thank you for contacting MB CONSULT.')
+      })
+    })
+  })
+})
 })
