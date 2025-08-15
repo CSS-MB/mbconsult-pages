@@ -5,3 +5,9 @@ node_modules/
 cypress/screenshots/
 cypress/videos/
 cypress/downloads/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

@@ -19,6 +19,8 @@
     "validator": "^13.11.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "@types/node": "^24.2.1",
     "cypress": "^14.5.4"
   }
 }
