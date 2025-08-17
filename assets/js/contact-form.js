@@ -236,8 +236,20 @@
     // Clear previous status
     clearStatus(liveRegion);
 
-    // Validate all fields first
+    // Disable submit button and show loading immediately for better UX
+    const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+    const originalSubmitState = disableSubmitButton(submitButton);
+    
+    // Show loading state first
+    showStatus(liveRegion, 'Preparing to send your message...', 'info');
+    
+    // Small delay to ensure users see the loading state
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Validate all fields after showing loading
     if (!validateAllFields(form, liveRegion)) {
+      // Restore button on validation failure
+      restoreSubmitButton(submitButton, originalSubmitState);
       return;
     }
 
@@ -263,14 +275,14 @@
     // Honeypot check - silent success
     if (honeypot !== "") {
       showStatus(liveRegion, 'Message sent! Thank you for contacting MB CONSULT.', 'success');
-      setTimeout(() => form.reset(), 1000);
+      setTimeout(() => {
+        form.reset();
+        restoreSubmitButton(submitButton, originalSubmitState);
+      }, 1000);
       return;
     }
 
-    // Disable submit button and show loading
-    const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
-    const originalSubmitState = disableSubmitButton(submitButton);
-    
+    // Update loading message for actual sending
     showStatus(liveRegion, 'Sending your message...', 'info');
 
     try {
@@ -363,7 +375,7 @@
       showStatus(liveRegion, userMessage, 'error');
       
     } finally {
-      // Restore submit button
+      // Restore submit button (moved to earlier locations for success cases)
       restoreSubmitButton(submitButton, originalSubmitState);
     }
   }
