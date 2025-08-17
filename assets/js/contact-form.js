@@ -245,7 +245,6 @@
     
     // Small delay to ensure users see the loading state
     await new Promise(resolve => setTimeout(resolve, 100));
-
     // Validate all fields after showing loading
     if (!validateAllFields(form, liveRegion)) {
       // Restore button on validation failure
