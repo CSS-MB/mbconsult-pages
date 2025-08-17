@@ -374,7 +374,7 @@
       showStatus(liveRegion, userMessage, 'error');
       
     } finally {
-      // Restore submit button (moved to earlier locations for success cases)
+      // Restore submit button for error cases (success cases handle restoration earlier)
       restoreSubmitButton(submitButton, originalSubmitState);
     }
   }
