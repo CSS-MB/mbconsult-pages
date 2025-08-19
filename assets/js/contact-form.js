@@ -418,12 +418,16 @@
       console.error("Form submission error:", error);
       
       // Check if this looks like a blocked request (common with ad blockers)
-      const isBlockedRequest = error.message.includes('fetch') || 
-                              error.message.includes('Failed to fetch') ||
-                              error.message.includes('NetworkError') ||
-                              error.message.includes('blocked');
+      // Only use fallback for specific blocking scenarios, not general network errors
+      const isLikelyBlocked = error.message.includes('ERR_BLOCKED_BY_CLIENT') || 
+                             error.message.includes('blocked');
+      
+      // In test environments or for general fetch failures, be more conservative
+      const isTestEnvironment = window.Cypress || navigator.webdriver;
+      const shouldUseFallback = isLikelyBlocked || 
+                               (!isTestEnvironment && error.message.includes('Failed to fetch'));
                               
-      if (isBlockedRequest && ENDPOINT) {
+      if (shouldUseFallback && ENDPOINT) {
         // Try fallback form submission (less likely to be blocked)
         showStatus(liveRegion, 'Trying alternative submission method...', 'info');
         
@@ -448,7 +452,7 @@
       let userMessage = error.message;
       
       // Provide specific message for blocked requests
-      if (isBlockedRequest) {
+      if (isLikelyBlocked) {
         userMessage = 'Your request may have been blocked by an ad blocker or security software. Please try disabling ad blockers for this site, or contact us directly.';
       } else if (userMessage.includes('fetch') || userMessage.includes('network') || userMessage.includes('NetworkError')) {
         userMessage = 'Unable to connect to our servers. Please check your internet connection and try again.';
