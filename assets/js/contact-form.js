@@ -240,7 +240,13 @@
       tempForm.method = 'POST';
       tempForm.action = endpoint;
       tempForm.style.display = 'none';
-      tempForm.target = '_blank'; // Open in new tab so user stays on page
+      // Create a hidden iframe to submit the form in the background
+      const iframeName = 'contactFormFallbackIframe_' + Date.now();
+      const iframe = document.createElement('iframe');
+      iframe.name = iframeName;
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      tempForm.target = iframeName;
       
       // Add form fields
       Object.keys(data).forEach(key => {
