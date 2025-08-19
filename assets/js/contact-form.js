@@ -427,7 +427,8 @@
       // Check if this looks like a blocked request (common with ad blockers)
       // Only use fallback for specific blocking scenarios, not general network errors
       const isLikelyBlocked = error.message.includes('ERR_BLOCKED_BY_CLIENT') || 
-                             error.message.includes('blocked');
+                             error.message.includes('blocked') ||
+                             (error.name === 'TypeError' && error.message && error.message.includes('fetch'));
       
       // In test environments or for general fetch failures, be more conservative
       const isTestEnvironment = window.Cypress || navigator.webdriver;
