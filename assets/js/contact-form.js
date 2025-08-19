@@ -281,7 +281,8 @@
         
         // Since we can't verify the submission success with form submission,
         // we'll assume it succeeded if it didn't throw an error
-        resolve(true);
+        // we'll resolve with an object indicating the submission was attempted but not verified
+        resolve({ attempted: true, verified: false });
         
       } catch (error) {
         document.body.removeChild(tempForm);
