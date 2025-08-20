@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://mbconsult.io/sitemap.xml

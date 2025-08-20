@@ -18,5 +18,9 @@
     "@playwright/test": "^1.54.2",
     "@types/node": "^24.2.1",
     "cypress": "^14.5.4"
+  },
+  "dependencies": {
+    "htmlhint": "^1.6.3",
+    "sass": "^1.90.0"
   }
 }
