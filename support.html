@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<!--
+  MB CONSULT Site
+  Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Support – NetSuite ↔ Microsoft 365 Integration Hub | MB CONSULT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Support information for the NetSuite ↔ Microsoft 365 Integration Hub by MB Consult, LLC." />
+    <link rel="canonical" href="https://mbconsult.io/support" />
+    <meta property="og:title" content="Support – NetSuite ↔ Microsoft 365 Integration Hub" />
+    <meta property="og:description" content="How to get help with installation, configuration, and troubleshooting." />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://mbconsult.io/support" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <noscript>
+      <link rel="stylesheet" href="assets/css/noscript.css" />
+    </noscript>
+  </head>
+
+  <body class="is-preload">
+    <!-- Header -->
+    <header id="header">
+      <a href="index.html" class="title">MB CONSULT</a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="generic.html">About</a></li>
+          <li><a href="elements.html">Services &amp; Features</a></li>
+          <li><a href="privacy-policy.html">Privacy</a></li>
+          <li><a href="support.html" class="active">Support</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <!-- Wrapper -->
+    <div id="wrapper">
+      <!-- Main -->
+      <section id="main" class="wrapper">
+        <div class="inner">
+          <h1 class="major">Support</h1>
+          <p class="meta"><strong>For: NetSuite ↔ Microsoft 365 Integration Hub</strong></p>
+          <hr />
+
+          <section>
+            <h2>Contact</h2>
+            <p>Email: <a href="mailto:support@mbconsult.io">support@mbconsult.io</a><br />
+               Business hours: Mon–Fri, 9:00–5:00 CST</p>
+          </section>
+
+          <section>
+            <h2>What to include</h2>
+            <ul>
+              <li>Tenant identifiers (NetSuite Account ID; Entra tenant ID if applicable)</li>
+              <li>Feature area (Outlook add-in, SharePoint sync, Copilot agent, Connector)</li>
+              <li>Timestamp and correlation/trace IDs (Graph/NetSuite/Function logs)</li>
+              <li>Exact error text and steps to reproduce</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>Self-service checks</h2>
+            <ol>
+              <li>Verify the integration role in NetSuite has required permissions and token/OAuth access.</li>
+              <li>Confirm Entra app registrations, API permissions, and consent are complete.</li>
+              <li>If using Azure Functions/Storage, check function logs and app settings.</li>
+              <li>Re-run connectivity tests; ensure firewall/IP allowlists aren't blocking outbound calls.</li>
+            </ol>
+          </section>
+
+          <section>
+            <h2>Common Issues &amp; Solutions</h2>
+            <h3>Authentication Problems</h3>
+            <ul>
+              <li><strong>OAuth token expired:</strong> Re-authenticate through the integration setup</li>
+              <li><strong>Permission denied:</strong> Verify admin consent has been granted for required Microsoft Graph permissions</li>
+              <li><strong>NetSuite access issues:</strong> Check that the integration role has the necessary permissions</li>
+            </ul>
+
+            <h3>Sync Issues</h3>
+            <ul>
+              <li><strong>Data not syncing:</strong> Check Azure Function logs for error messages</li>
+              <li><strong>Partial sync:</strong> Verify field mappings and data type compatibility</li>
+              <li><strong>Sync delays:</strong> Review trigger configurations and scheduling settings</li>
+            </ul>
+
+            <h3>Configuration Problems</h3>
+            <ul>
+              <li><strong>Missing data fields:</strong> Update field mappings in the integration configuration</li>
+              <li><strong>Incorrect formatting:</strong> Review data transformation rules</li>
+              <li><strong>Connection timeouts:</strong> Check network connectivity and firewall settings</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>Documentation &amp; Resources</h2>
+            <ul>
+              <li><a href="https://docs.microsoft.com/en-us/graph/" target="_blank" rel="noopener">Microsoft Graph API Documentation</a></li>
+              <li><a href="https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/" target="_blank" rel="noopener">NetSuite Help Center</a></li>
+              <li><a href="https://azure.microsoft.com/en-us/documentation/" target="_blank" rel="noopener">Azure Documentation</a></li>
+            </ul>
+          </section>
+
+          <section>
+            <h2>Status</h2>
+            <p>We will publish availability notes or incidents on this page if applicable.</p>
+            <p><strong>Current Status:</strong> All services operational</p>
+          </section>
+
+          <footer>
+            <hr />
+            <p class="meta">© MB Consult, LLC</p>
+          </footer>
+        </div>
+      </section>
+    </div>
+
+    <!-- Footer -->
+    <footer id="footer" class="wrapper alt">
+      <div class="inner">
+        <ul class="menu">
+          <li>&copy; MB CONSULT. All rights reserved.</li>
+        </ul>
+      </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/js/jquery.scrollex.min.js"></script>
+    <script src="assets/js/jquery.scrolly.min.js"></script>
+    <script src="assets/js/browser.min.js"></script>
+    <script src="assets/js/breakpoints.min.js"></script>
+    <script src="assets/js/util.js"></script>
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>
