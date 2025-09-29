@@ -432,8 +432,8 @@
       
       // In test environments or for general fetch failures, be more conservative
       const isTestEnvironment = window.Cypress || navigator.webdriver;
-      const shouldUseFallback = isLikelyBlocked || 
-                               error.message.includes('Failed to fetch');
+      // Only use fallback for confirmed blocking scenarios, not general network errors
+      const shouldUseFallback = isLikelyBlocked;
                               
       if (shouldUseFallback && ENDPOINT) {
         // Try fallback form submission (less likely to be blocked)
