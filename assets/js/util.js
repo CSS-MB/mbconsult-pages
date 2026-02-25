@@ -110,9 +110,10 @@
         );
       }
       // Treat string targets strictly as CSS selectors, not as HTML.
+      // Use find() on document so the string is never passed to $() as HTML.
       config.target = $(document).find(targetStr);
     } else if (config.target instanceof jQuery) {
-      // already a jQuery object, fine
+      // Already a jQuery object; no change needed.
     } else if (
       config.target === window ||
       config.target === document ||
