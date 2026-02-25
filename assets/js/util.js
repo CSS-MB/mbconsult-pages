@@ -18,14 +18,10 @@
           'class="link depth-' +
           indent +
           '"' +
-          (typeof target !== "undefined" && target != ""
-            ? ' target="' + target + '"'
-            : "") +
-          (typeof href !== "undefined" && href != ""
-            ? ' href="' + href + '"'
-            : "") +
-          ">" +
-          '<span class="indent-' +
+          (typeof target !== "undefined" && target != "" ? ' target="' + target + '"' : "") +
+          (typeof href !== "undefined" && href != "" ? ' href="' + href + '"' : "") +
+          ">
+          <span class="indent-' +
           indent +
           '"></span>' +
           $this.text() +
@@ -101,11 +97,11 @@
       // Reject HTML-like strings to avoid jQuery interpreting them as HTML.
       // This catches strings starting with '<', or containing closing tags, or '>' before whitespace.
       if (
-        /^\s*</.test(targetStr) || // starts with '<' (possibly after whitespace)
+        /^
+</.test(targetStr) || // starts with '<' (possibly after whitespace)
         /<\/[a-zA-Z]/.test(targetStr) || // contains a closing tag
         />\s*</.test(targetStr) // contains angle-bracketed markup
       ) {
-      if (/^\s*</.test(config.target)) {
         throw new Error(
           "Unsafe value for config.target: HTML strings are not allowed, only CSS selectors or DOM nodes."
         );
@@ -127,9 +123,6 @@
       throw new Error(
         "Invalid value for config.target: expected a CSS selector string, DOM node, or jQuery object."
       );
-      config.target = $(config.target);
-    } else if (!(config.target instanceof $)) {
-      config.target = $(config.target);
     }
 
     // Panel.
@@ -345,11 +338,13 @@
     $this.find("input[type=password]").each(function () {
       var i = $(this);
       var x = $(
-        $("<div>")
+        $(
+          "<div>"
+        )
           .append(i.clone())
           .remove()
           .html()
-          .replace(/type="password"/i, 'type="text"')
+          .replace(/type=\"password\"/i, 'type="text"')
           .replace(/type=password/i, "type=text")
       );
 
@@ -523,5 +518,5 @@
         $e.removeData(key);
       }
     });
-  };
+  }; 
 })(jQuery);
