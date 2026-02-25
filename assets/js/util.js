@@ -98,13 +98,8 @@
     // Only accept a selector or DOM node, never HTML.
     if (typeof config.target === "string") {
       var targetStr = config.target;
-      // Reject HTML-like strings to avoid jQuery interpreting them as HTML.
-      // This catches strings starting with '<', or containing closing tags, or '>' before whitespace.
-      if (
-        /^\s*</.test(targetStr) || // starts with '<' (possibly after whitespace)
-        /<\/[a-zA-Z]/.test(targetStr) || // contains a closing tag
-        />\s*</.test(targetStr) // contains angle-bracketed markup
-      ) {
+      // Reject any string containing '<' or '>' to avoid jQuery interpreting it as HTML.
+      if (/[<>]/.test(targetStr)) {
         throw new Error(
           "Unsafe value for config.target: HTML strings are not allowed, only CSS selectors or DOM nodes."
         );
