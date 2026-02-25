@@ -2,20 +2,18 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+Only the `main` branch of this repository receives security updates.
 
-| Version | Supported          |
+| Branch  | Supported          |
 | ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| `main`  | :white_check_mark: |
+| Other   | :x:                |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+If you discover a security vulnerability in this project, please report it through one of the following channels:
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+- **GitHub Security Advisories**: Use the [Report a vulnerability](../../security/advisories/new) link in the Security tab of this repository to submit a private report.
+- **Email**: Send details to [support@mbconsult.io](mailto:support@mbconsult.io).
+
+Please include a clear description of the issue, steps to reproduce, and any relevant context. You can expect an initial response within a few business days. We will keep you informed as we investigate and, once resolved, will credit reporters where appropriate.
