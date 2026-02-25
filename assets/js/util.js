@@ -97,19 +97,34 @@
     // Expand "target" if it's not a jQuery object already.
     // Only accept a selector or DOM node, never HTML.
     if (typeof config.target === "string") {
-      // Reject HTML-like strings (e.g., "<div>") to avoid jQuery interpreting them as HTML.
-      if (/^\s*</.test(config.target)) {
+      var targetStr = config.target;
+      // Reject HTML-like strings to avoid jQuery interpreting them as HTML.
+      // This catches strings starting with '<', or containing closing tags, or '>' before whitespace.
+      if (
+        /^\s*</.test(targetStr) || // starts with '<' (possibly after whitespace)
+        /<\/[a-zA-Z]/.test(targetStr) || // contains a closing tag
+        />\s*</.test(targetStr) // contains angle-bracketed markup
+      ) {
         throw new Error(
           "Unsafe value for config.target: HTML strings are not allowed, only CSS selectors or DOM nodes."
         );
       }
       // Treat string targets strictly as CSS selectors, not as HTML.
-      config.target = $(document).find(config.target);
+      config.target = $(document).find(targetStr);
     } else if (config.target instanceof jQuery) {
       // already a jQuery object, fine
-    } else {
-      // Assume a DOM node; wrap it in a jQuery object.
+    } else if (
+      config.target === window ||
+      config.target === document ||
+      (config.target && typeof config.target.nodeType === "number")
+    ) {
+      // DOM node (or window/document); wrap it in a jQuery object.
       config.target = $(config.target);
+    } else {
+      // Any other type is not supported and could be unsafe.
+      throw new Error(
+        "Invalid value for config.target: expected a CSS selector string, DOM node, or jQuery object."
+      );
     }
 
     // Panel.
