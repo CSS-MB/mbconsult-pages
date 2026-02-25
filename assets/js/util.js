@@ -97,15 +97,18 @@
     // Expand "target" if it's not a jQuery object already.
     // Only accept a selector or DOM node, never HTML.
     if (typeof config.target === "string") {
+      // Reject HTML-like strings (e.g., "<div>") to avoid jQuery interpreting them as HTML.
       if (/^\s*</.test(config.target)) {
         throw new Error(
           "Unsafe value for config.target: HTML strings are not allowed, only CSS selectors or DOM nodes."
         );
       }
-      config.target = $(config.target);
+      // Treat string targets strictly as CSS selectors, not as HTML.
+      config.target = $(document).find(config.target);
     } else if (config.target instanceof jQuery) {
       // already a jQuery object, fine
     } else {
+      // Assume a DOM node; wrap it in a jQuery object.
       config.target = $(config.target);
     }
 
