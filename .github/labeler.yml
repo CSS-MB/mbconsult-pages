@@ -1,0 +1,11 @@
+site:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.html"
+          - "assets/**"
+
+github-actions:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - ".github/labeler.yml"
