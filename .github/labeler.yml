@@ -3,7 +3,9 @@
 
 "github-actions":
   - changed-files:
-    - any-glob-to-any-file: '.github/**'
+    - any-glob-to-any-file:
+      - '.github/**'
+      - '.github/workflows/**'
 
 "CI/CD":
   - changed-files:
@@ -58,14 +60,3 @@
 "security":
   - changed-files:
     - any-glob-to-any-file: 'SECURITY.md'
-site:
-  - changed-files:
-      - any-glob-to-any-file:
-          - "*.html"
-          - "assets/**"
-
-github-actions:
-  - changed-files:
-      - any-glob-to-any-file:
-          - ".github/workflows/**"
-          - ".github/labeler.yml"
