@@ -1,0 +1,60 @@
+# Labeler configuration for actions/labeler@v4
+# See: https://github.com/actions/labeler
+
+"github-actions":
+  - changed-files:
+    - any-glob-to-any-file: '.github/**'
+
+"CI/CD":
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.azure-pipelines/**'
+      - '.api-center-rules/**'
+
+"tooling":
+  - changed-files:
+    - any-glob-to-any-file: '.vscode/**'
+
+"dependencies":
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'package.json'
+      - 'package-lock.json'
+
+"tests":
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'tests/**'
+      - 'tests-examples/**'
+      - 'cypress/**'
+      - 'playwright.config.*'
+      - 'cypress.config.*'
+
+"assets":
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'assets/**'
+      - 'images/**'
+      - '**/*.png'
+      - '**/*.jpg'
+      - '**/*.jpeg'
+      - '**/*.gif'
+      - '**/*.svg'
+      - '**/*.webp'
+      - '**/*.ico'
+
+"content":
+  - changed-files:
+    - any-glob-to-any-file:
+      - '*.html'
+      - 'robots.txt'
+      - 'sitemap.xml'
+      - 'CNAME'
+
+"documentation":
+  - changed-files:
+    - any-glob-to-any-file: '*.md'
+
+"security":
+  - changed-files:
+    - any-glob-to-any-file: 'SECURITY.md'
