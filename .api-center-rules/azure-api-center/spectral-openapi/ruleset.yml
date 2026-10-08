@@ -1,4 +1,4 @@
-extends: ['spectral:oas', all],
+extends: [['spectral:oas', all]]
 functions:
   - greeting
 rules:
